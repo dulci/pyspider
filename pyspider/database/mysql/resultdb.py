@@ -71,7 +71,6 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         lib = hashlib.md5()
         lib.update(md5str.encode("utf-8"))
         md5 = lib.hexdigest()
-        print(md5)
         obj = {
             'crawler_team_id': crawler_team_id,
             'code': project,
