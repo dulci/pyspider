@@ -10,6 +10,7 @@ import six
 import time
 import json
 import mysql.connector
+import hashlib
 
 from pyspider.libs import utils
 from pyspider.database.base.resultdb import ResultDB as BaseResultDB
@@ -56,15 +57,29 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         return data
 
     def save(self, project, taskid, url, result):
-        tablename = self._tablename(project)
-        if project not in self.projects:
-            self._create_project(project)
-            self._list_project()
+        # tablename = self._tablename(project)
+        tablename = "completion_delay_monitoring_record"
+        # get team_id
+        team_id_res = self._select("bid_website", 'crawler_team_id, website_type', "code = %s", [project], 0, 1)
+        for res in team_id_res:
+            if res:
+                crawler_team_id = res[0]
+                website_type = res[1]
+                break
+        crawler_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
+        md5str = str(project) + str(result['title']) + str(result['publish_date'])
+        lib = hashlib.md5()
+        lib.update(md5str.encode("utf-8"))
+        md5 = lib.hexdigest()
+        print(md5)
         obj = {
-            'taskid': taskid,
-            'url': url,
-            'result': result,
-            'updatetime': time.time(),
+            'crawler_team_id': crawler_team_id,
+            'code': project,
+            'website_type': website_type,
+            'title': result['title'],
+            'publish_date': result['publish_date'],
+            'crawler_time': crawler_time,
+            'md5': md5
         }
         return self._replace(tablename, **self._stringify(obj))
 
