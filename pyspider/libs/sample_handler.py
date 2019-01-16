@@ -10,18 +10,18 @@ class Handler(BaseHandler):
     crawl_config = {
     }
 
-    @every(minutes=24 * 60)
+    @every(minutes=30)
     def on_start(self):
         self.crawl('__START_URL__', callback=self.index_page)
 
     @config(age=10 * 24 * 60 * 60)
     def index_page(self, response):
         for each in response.doc('a[href^="http"]').items():
-            self.crawl(each.attr.href, callback=self.detail_page)
+            self.crawl(each.attr.href, callback=self.detail_page, save={'title': each.find('a').text(), 'publish_date': each.find('span').text()})
 
     @config(priority=2)
     def detail_page(self, response):
         return {
-            "url": response.url,
-            "title": response.doc('title').text(),
+            "title": response.save['title'],
+            "publish_date": response.save['publish_date'],
         }
