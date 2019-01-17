@@ -118,6 +118,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         obj['taskid'] = taskid
         obj['project'] = project
         obj['updatetime'] = time.time()
+        del obj['skip_fetcher']
         tablename = self._tablename(project)
         return self._insert(tablename, **self._stringify(obj))
 

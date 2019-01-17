@@ -324,6 +324,11 @@ class BaseHandler(object):
         else:
             task['taskid'] = self.get_taskid(task)
 
+        if 'skip_fetcher' in kwargs:
+            task['skip_fetcher'] = kwargs.pop('skip_fetcher')
+        else:
+            task['skip_fetcher'] = False
+
         if kwargs:
             raise TypeError('crawl() got unexpected keyword argument: %s' % kwargs.keys())
 
@@ -346,6 +351,8 @@ class BaseHandler(object):
         available params:
           url
           callback
+
+          skip_fetcher
 
           method
           params

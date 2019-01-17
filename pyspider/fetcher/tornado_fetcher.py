@@ -374,53 +374,59 @@ class Fetcher(object):
                 logger.exception(fetch)
                 raise gen.Return(handle_error(e))
 
-            try:
-                response = yield gen.maybe_future(self.http_client.fetch(request))
-            except tornado.httpclient.HTTPError as e:
-                if e.response:
-                    response = e.response
-                else:
-                    raise gen.Return(handle_error(e))
+            if not task.get('skip_fetcher'):
+                try:
+                    response = yield gen.maybe_future(self.http_client.fetch(request))
+                except tornado.httpclient.HTTPError as e:
+                    if e.response:
+                        response = e.response
+                    else:
+                        raise gen.Return(handle_error(e))
 
-            extract_cookies_to_jar(session, response.request, response.headers)
-            if (response.code in (301, 302, 303, 307)
-                    and response.headers.get('Location')
-                    and task_fetch.get('allow_redirects', True)):
-                if max_redirects <= 0:
-                    error = tornado.httpclient.HTTPError(
-                        599, 'Maximum (%d) redirects followed' % task_fetch.get('max_redirects', 5),
-                        response)
-                    raise gen.Return(handle_error(error))
-                if response.code in (302, 303):
-                    fetch['method'] = 'GET'
-                    if 'body' in fetch:
-                        del fetch['body']
-                fetch['url'] = quote_chinese(urljoin(fetch['url'], response.headers['Location']))
-                fetch['request_timeout'] -= time.time() - start_time
-                if fetch['request_timeout'] < 0:
-                    fetch['request_timeout'] = 0.1
-                max_redirects -= 1
-                continue
+                extract_cookies_to_jar(session, response.request, response.headers)
+                if (response.code in (301, 302, 303, 307)
+                        and response.headers.get('Location')
+                        and task_fetch.get('allow_redirects', True)):
+                    if max_redirects <= 0:
+                        error = tornado.httpclient.HTTPError(
+                            599, 'Maximum (%d) redirects followed' % task_fetch.get('max_redirects', 5),
+                            response)
+                        raise gen.Return(handle_error(error))
+                    if response.code in (302, 303):
+                        fetch['method'] = 'GET'
+                        if 'body' in fetch:
+                            del fetch['body']
+                    fetch['url'] = quote_chinese(urljoin(fetch['url'], response.headers['Location']))
+                    fetch['request_timeout'] -= time.time() - start_time
+                    if fetch['request_timeout'] < 0:
+                        fetch['request_timeout'] = 0.1
+                    max_redirects -= 1
+                    continue
 
             result = {}
             result['orig_url'] = url
-            result['content'] = response.body or ''
-            result['headers'] = dict(response.headers)
-            result['status_code'] = response.code
-            result['url'] = response.effective_url or url
+            if not task.get('skip_fetcher'):
+                result['content'] = response.body or ''
+                result['headers'] = dict(response.headers)
+                result['status_code'] = response.code
+                result['url'] = response.effective_url or url
+            else:
+                result['status_code'] = 200
+                result['url'] = url
             result['time'] = time.time() - start_time
             result['cookies'] = session.get_dict()
             result['save'] = task_fetch.get('save')
-            if response.error:
-                result['error'] = utils.text(response.error)
-            if 200 <= response.code < 300:
-                logger.info("[%d] %s:%s %s %.2fs", response.code,
-                            task.get('project'), task.get('taskid'),
-                            url, result['time'])
-            else:
-                logger.warning("[%d] %s:%s %s %.2fs", response.code,
-                               task.get('project'), task.get('taskid'),
-                               url, result['time'])
+            if not task.get('skip_fetcher'):
+                if response.error:
+                    result['error'] = utils.text(response.error)
+                if 200 <= response.code < 300:
+                    logger.info("[%d] %s:%s %s %.2fs", response.code,
+                                task.get('project'), task.get('taskid'),
+                                url, result['time'])
+                else:
+                    logger.warning("[%d] %s:%s %s %.2fs", response.code,
+                                   task.get('project'), task.get('taskid'),
+                                   url, result['time'])
 
             raise gen.Return(result)
 
