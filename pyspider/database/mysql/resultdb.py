@@ -67,7 +67,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
                 website_type = res[1]
                 break
         crawler_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
-        md5str = str(project) + str(result['title']) + str(result['publish_date'] + " 00:00:00")
+        md5str = str(project) + str(result['title']).strip() + str(result['publish_date'] + " 00:00:00")
         lib = hashlib.md5()
         lib.update(md5str.encode("utf-8"))
         md5 = lib.hexdigest()
@@ -75,7 +75,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             'crawler_team_id': crawler_team_id,
             'code': project,
             'website_type': website_type,
-            'title': result['title'],
+            'title': str(result['title']).strip(),
             'publish_date': result['publish_date'],
             'crawler_time': crawler_time,
             'md5': md5
