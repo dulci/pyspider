@@ -94,8 +94,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             'website_type': website_type,
             'title': str(result['title']).strip(),
             'publish_date': result['publish_date'],
-            'crawler_time': crawler_time,
-            'md5': md5
+            'crawler_time': crawler_time
         }
         return self._replace(tablename, **self._stringify(obj))
 
