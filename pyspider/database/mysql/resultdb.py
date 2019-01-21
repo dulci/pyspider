@@ -61,7 +61,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         # 记录表保存
         tablename = "crawler_result_record"
         if project not in self.projects:
-            self._create_project(project)
+            #self._create_project(project)
             self._list_project()
         obj = {
             'project': project,
