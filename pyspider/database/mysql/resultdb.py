@@ -40,7 +40,8 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             `taskid` varchar(64) PRIMARY KEY,
             `url` varchar(1024),
             `result` MEDIUMBLOB,
-            `updatetime` double(16, 4)
+            `updatetime` double(16, 4),
+            `skip_fetcher` int(11)
             ) ENGINE=InnoDB CHARSET=utf8''' % self.escape(tablename))
 
     def _parse(self, data):
@@ -57,9 +58,25 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         return data
 
     def save(self, project, taskid, url, result):
-        # tablename = self._tablename(project)
+        # 记录表保存
+        tablename = "crawler_result_record"
+        if project not in self.projects:
+            self._create_project(project)
+            self._list_project()
+        obj = {
+            'project': project,
+            'taskid': taskid,
+            'url': url,
+            'result': result,
+            'updatetime': time.time(),
+        }
+        self._replace(tablename, **self._stringify(obj))
+
+        # 监控表保存
         tablename = "completion_delay_monitoring_record"
         # get team_id
+        crawler_team_id = ""
+        website_type = ""
         team_id_res = self._select("bid_website", 'crawler_team_id, website_type', "code = %s", [project], 0, 1)
         for res in team_id_res:
             if res:
@@ -87,9 +104,10 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             self._list_project()
         if project not in self.projects:
             return
-        tablename = self._tablename(project)
+        # tablename = self._tablename(project)
+        tablename = "crawler_result_record"
 
-        for task in self._select2dic(tablename, what=fields, order='updatetime DESC',
+        for task in self._select2dic(tablename, where="project = %s", where_values=[project], what=fields, order='updatetime DESC',
                                      offset=offset, limit=limit):
             yield self._parse(task)
 

@@ -47,6 +47,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
             `track` BLOB,
             `lastcrawltime` double(16, 4),
             `updatetime` double(16, 4),
+            `skip_fetcher` int(11),
             INDEX `status_index` (`status`)
             ) ENGINE=InnoDB CHARSET=utf8''' % self.escape(tablename))
 
@@ -118,8 +119,6 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         obj['taskid'] = taskid
         obj['project'] = project
         obj['updatetime'] = time.time()
-        if 'skip_fetcher' in obj:
-            del obj['skip_fetcher']
         tablename = self._tablename(project)
         return self._insert(tablename, **self._stringify(obj))
 
