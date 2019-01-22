@@ -22,7 +22,7 @@ from pyspider.libs import utils
 class Response(object):
 
     def __init__(self, status_code=None, url=None, orig_url=None, headers=CaseInsensitiveDict(),
-                 content='', cookies=None, error=None, traceback=None, save=None, js_script_result=None, time=0):
+                 content='', cookies=None, error=None, traceback=None, save=None, js_script_result=None, time=0, page_num = -1):
         if cookies is None:
             cookies = {}
         self.status_code = status_code
@@ -36,6 +36,7 @@ class Response(object):
         self.save = save
         self.js_script_result = js_script_result
         self.time = time
+        self.page_num = page_num
 
     def __repr__(self):
         return u'<Response [%d]>' % self.status_code
@@ -47,6 +48,9 @@ class Response(object):
     def __nonzero__(self):
         """Returns true if `status_code` is 200 and no error."""
         return self.ok
+
+    def modify_page_num(self, page_num):
+        self.page_num = page_num
 
     @property
     def ok(self):

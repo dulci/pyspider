@@ -144,7 +144,7 @@ class Fetcher(object):
         except Exception as e:
             logger.exception(e)
             result = self.handle_error(type, url, task, start_time, e)
-
+            
         callback(type, task, result)
         self.on_result(type, task, result)
         raise gen.Return(result)

@@ -187,6 +187,8 @@ class BaseHandler(object):
         self.task = task
         if isinstance(response, dict):
             response = rebuild_response(response)
+        if 'page_num' in task:
+            response.modify_page_num(task['page_num'])
         self.response = response
         self.save = (task.get('track') or {}).get('save', {})
 
@@ -330,6 +332,11 @@ class BaseHandler(object):
             task['skip_fetcher'] = kwargs.pop('skip_fetcher')
         else:
             task['skip_fetcher'] = False
+        
+        if 'page_num' in kwargs:
+            task['page_num'] = kwargs.pop('page_num')
+        else:
+            task['page_num'] = 0
 
         if kwargs:
             raise TypeError('crawl() got unexpected keyword argument: %s' % kwargs.keys())
@@ -355,6 +362,7 @@ class BaseHandler(object):
           callback
 
           skip_fetcher
+          page_num
 
           method
           params

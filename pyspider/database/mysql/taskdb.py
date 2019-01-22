@@ -120,6 +120,8 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         obj['taskid'] = taskid
         obj['project'] = project
         obj['updatetime'] = time.time()
+        if 'page_num' in obj:
+            del obj['page_num']
         tablename = self._tablename(project)
         return self._insert(tablename, **self._stringify(obj))
 
@@ -132,6 +134,8 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         obj = dict(obj)
         obj.update(kwargs)
         obj['updatetime'] = time.time()
+        if 'page_num' in obj:
+            del obj['page_num']
         return self._update(
             tablename,
             where="`taskid` = %s" % self.placeholder,
