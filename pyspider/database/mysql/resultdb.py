@@ -68,6 +68,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         obj = {
             'project': project,
             'taskid': taskid,
+            'group': group,
             'url': url,
             'result': result,
             'updatetime': time.time(),
