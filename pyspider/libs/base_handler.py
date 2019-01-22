@@ -318,7 +318,8 @@ class BaseHandler(object):
         task['process'] = process
 
         task['project'] = self.project_name
-        task['group'] = self.project['group']
+        if 'group' in self.project:
+            task['group'] = self.project['group']
         task['url'] = url
         if 'taskid' in kwargs:
             task['taskid'] = kwargs.pop('taskid')
