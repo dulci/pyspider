@@ -48,6 +48,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
             `lastcrawltime` double(16, 4),
             `updatetime` double(16, 4),
             `skip_fetcher` int(11),
+            `group` varchar(64),
             INDEX `status_index` (`status`)
             ) ENGINE=InnoDB CHARSET=utf8''' % self.escape(tablename))
 
