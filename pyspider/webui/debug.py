@@ -40,7 +40,7 @@ def debug(project):
     projectdb = app.config['projectdb']
     if not projectdb.verify_project_name(project):
         return 'project name is not allowed!', 400
-    info = projectdb.get(project, fields=['name', 'script'])
+    info = projectdb.get(project, fields=['name', 'script', 'group'])
     if info:
         script = info['script']
     else:
@@ -91,7 +91,7 @@ def run(project):
 
     if request.form.get('webdav_mode') == 'true':
         projectdb = app.config['projectdb']
-        info = projectdb.get(project, fields=['name', 'script'])
+        info = projectdb.get(project, fields=['name', 'script', 'group'])
         if not info:
             result = {
                 'fetch_result': "",
@@ -210,7 +210,7 @@ def get_script(project):
     projectdb = app.config['projectdb']
     if not projectdb.verify_project_name(project):
         return 'project name is not allowed!', 400
-    info = projectdb.get(project, fields=['name', 'script'])
+    info = projectdb.get(project, fields=['name', 'script', 'group'])
     return json.dumps(utils.unicode_obj(info)), \
         200, {'Content-Type': 'application/json'}
 

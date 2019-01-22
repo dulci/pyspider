@@ -35,7 +35,8 @@ class ResultWorker(object):
                 project=task['project'],
                 taskid=task['taskid'],
                 url=task['url'],
-                result=result
+                result=result,
+                group=task['group']
             )
         else:
             logger.warning('result UNKNOW -> %.30r' % result)

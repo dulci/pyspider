@@ -57,12 +57,14 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             data['result'] = json.dumps(data['result'])
         return data
 
-    def save(self, project, taskid, url, result):
+    def save(self, project, taskid, url, result, group):
         # 记录表保存
         tablename = "crawler_result_record"
         if project not in self.projects:
             #self._create_project(project)
             self._list_project()
+        # 默认存放站源完整性表中
+        group_name = group
         obj = {
             'project': project,
             'taskid': taskid,
@@ -71,29 +73,41 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             'updatetime': time.time(),
         }
         self._replace(tablename, **self._stringify(obj))
-
-        # 监控表保存
-        tablename = "completion_delay_monitoring_record"
-        # get team_id
-        crawler_team_id = ""
-        website_type = ""
-        team_id_res = self._select("bid_website", 'crawler_team_id, website_type', "code = %s", [project], 0, 1)
-        for res in team_id_res:
-            if res:
-                crawler_team_id = res[0]
-                website_type = res[1]
-                break
-        crawler_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
-        obj = {
-            'crawler_team_id': crawler_team_id,
-            'code': project,
-            'website_type': website_type,
-            'title': str(result['title']).strip(),
-            'crawler_time': crawler_time
-        }
-        if 'publish_date' in result:
-            obj['publish_date'] = result['publish_date']
-        return self._replace(tablename, **self._stringify(obj))
+        if group_name == 'completion_delay_monitoring':
+            # 及时性完整性监控表保存
+            tablename = "completion_delay_monitoring_record"
+            # get team_id
+            crawler_team_id = ""
+            website_type = ""
+            team_id_res = self._select("bid_website", 'crawler_team_id, website_type', "code = %s", [project], 0, 1)
+            for res in team_id_res:
+                if res:
+                    crawler_team_id = res[0]
+                    website_type = res[1]
+                    break
+            crawler_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
+            obj = {
+                'crawler_team_id': crawler_team_id,
+                'code': project,
+                'website_type': website_type,
+                'title': str(result['title']).strip(),
+                'crawler_time': crawler_time
+            }
+            if 'publish_date' in result:
+                obj['publish_date'] = result['publish_date']
+            return self._replace(tablename, **self._stringify(obj))
+        elif group_name == 'business_miss_monitoring':
+            # 行业监控表保存
+            tablename = "business_miss_monitoring_record"
+            crawler_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
+            obj = {
+                'source': project,
+                'url': url,
+                'title': str(result['title']).strip(),
+                'publish_date': result['publish_date'],
+                'crawler_time': crawler_time,
+            }
+            return self._replace(tablename, **self._stringify(obj))
 
     def select(self, project, fields=None, offset=0, limit=None):
         if project not in self.projects:

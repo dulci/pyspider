@@ -128,6 +128,7 @@ class BaseHandler(object):
     """
     crawl_config = {}
     project_name = None
+    group_name = None
     _cron_jobs = []
     _min_tick = 0
     __env__ = {'not_inited': True}
@@ -318,8 +319,7 @@ class BaseHandler(object):
         task['process'] = process
 
         task['project'] = self.project_name
-        if 'group' in self.project:
-            task['group'] = self.project['group']
+        task['group'] = self.group_name
         task['url'] = url
         if 'taskid' in kwargs:
             task['taskid'] = kwargs.pop('taskid')

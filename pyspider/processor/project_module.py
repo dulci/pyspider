@@ -27,6 +27,7 @@ class ProjectManager(object):
 
     CHECK_PROJECTS_INTERVAL = 5 * 60
     RELOAD_PROJECT_INTERVAL = 60 * 60
+    
 
     @staticmethod
     def build_module(project, env=None):
@@ -74,6 +75,8 @@ class ProjectManager(object):
         instance.__env__ = env
         instance.project_name = project['name']
         instance.project = project
+        if 'group' in project:
+            instance.group_name = project['group']
 
         return {
             'loader': loader,
@@ -114,6 +117,12 @@ class ProjectManager(object):
             if project['updatetime'] > self.projects[project['name']]['info'].get('updatetime', 0):
                 self._update_project(project['name'])
         self.last_check_projects = time.time()
+
+    def _get_project_by_name(self, project_name):
+        tmp_project = self.projectdb.get(project_name)
+        if not tmp_project:
+            return None
+        return tmp_project['group']
 
     def _update_project(self, project_name):
         '''Update one project from database'''
