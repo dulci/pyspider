@@ -64,7 +64,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             #self._create_project(project)
             self._list_project()
         # 默认存放站源完整性表中
-        group_name = group
+        group_name = str(group).strip()
         obj = {
             'project': project,
             'taskid': taskid,
