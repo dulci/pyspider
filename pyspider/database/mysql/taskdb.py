@@ -47,8 +47,9 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
             `track` BLOB,
             `lastcrawltime` double(16, 4),
             `updatetime` double(16, 4),
-            `skip_fetcher` int(11),
+            `skip_fetcher` int(11) not null default 0,
             `group` varchar(64),
+            `page_num` int(11) not null default 0,
             INDEX `status_index` (`status`)
             ) ENGINE=InnoDB CHARSET=utf8''' % self.escape(tablename))
 
@@ -120,8 +121,6 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         obj['taskid'] = taskid
         obj['project'] = project
         obj['updatetime'] = time.time()
-        if 'page_num' in obj:
-            del obj['page_num']
         tablename = self._tablename(project)
         return self._insert(tablename, **self._stringify(obj))
 
@@ -134,8 +133,6 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         obj = dict(obj)
         obj.update(kwargs)
         obj['updatetime'] = time.time()
-        if 'page_num' in obj:
-            del obj['page_num']
         return self._update(
             tablename,
             where="`taskid` = %s" % self.placeholder,
