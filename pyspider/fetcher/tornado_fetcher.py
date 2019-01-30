@@ -33,6 +33,11 @@ from tornado.simple_httpclient import SimpleAsyncHTTPClient
 from pyspider.libs import utils, dataurl, counter
 from pyspider.libs.url import quote_chinese
 from .cookie_utils import extract_cookies_to_jar
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+import time
 logger = logging.getLogger('fetcher')
 
 
@@ -64,8 +69,7 @@ fetcher_output = {
 
 
 class Fetcher(object):
-    #user_agent = "pyspider/%s (+http://pyspider.org/)" % pyspider.__version__
-    user_agent = "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; InfoPath.3"
+    user_agent = "pyspider/%s (+http://pyspider.org/)" % pyspider.__version__
     default_options = {
         'method': 'GET',
         'headers': {
@@ -139,13 +143,22 @@ class Fetcher(object):
             elif task.get('fetch', {}).get('fetch_type') in ('splash', ):
                 type = 'splash'
                 result = yield self.splash_fetch(url, task)
+            elif task.get('fetch', {}).get('fetch_type') in ('chrome', 'ch'):
+                type = 'chrome'
+                result = yield self.chrome_fetch(url, task)
+            elif task.get('fetch', {}).get('fetch_type') in ('selenium_phantomjs_fetch', 'sp'):
+                type = 'selenium_phantomjs'
+                result = yield self.selenium_phantomjs_fetch(url, task)
             else:
                 type = 'http'
                 result = yield self.http_fetch(url, task)
         except Exception as e:
             logger.exception(e)
             result = self.handle_error(type, url, task, start_time, e)
-            
+        if result['status_code'] == 521:
+            result['status_code'] = 200
+            if 'error' in result:
+                del result['error']
         callback(type, task, result)
         self.on_result(type, task, result)
         raise gen.Return(result)
@@ -172,6 +185,7 @@ class Fetcher(object):
             wait_result.wait()
         wait_result.release()
         return _result['result']
+       
 
     def data_fetch(self, url, task):
         '''A fake fetcher for dataurl'''
@@ -320,6 +334,85 @@ class Fetcher(object):
         for domain, robot_txt in self.robots_txt_cache.items():
             if now - robot_txt.mtime() > self.robot_txt_age:
                 del self.robots_txt_cache[domain]
+    
+
+    @gen.coroutine
+    def selenium_phantomjs_fetch(self, url, task):
+        '''chrome fetcher'''
+        start_time = time.time()
+        result = {}
+        # result['orig_url'] = url
+        task_fetch = task.get('fetch', {})
+        try:           
+            dcap = dict(DesiredCapabilities.PHANTOMJS)
+            dcap["phantomjs.page.settings.userAgent"] = ("Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; InfoPath.3)")
+            obj = webdriver.PhantomJS(desired_capabilities=dcap) #加载网址
+            obj.set_page_load_timeout(30)
+            obj.maximize_window()
+            obj.get(url)
+            time.sleep(3)
+            num = 20
+            while not obj.page_source.startswith('<!DOCTYPE'):
+                time.sleep(1)
+                num = num -1
+                if num < 0:
+                    break
+            # result['content'] = driver.page_source
+            # result['headers'] = {}
+            # result['status_code'] = 200
+            # result['url'] = driver.current_url or url
+            # result['cookies'] = {}
+            print(obj.page_source)
+            result = {'orig_url':url, 'content':obj.page_source, 'headers':{}, 'status_code':200, 'url':obj.current_url or url, 'cookies':{}, 'time':time.time() - start_time, 'save':task_fetch.get('save')}
+            # if not result['content'].startswith('<!DOCTYPE'):
+            #     result['content'] = obj.page_source
+            #     print(obj.page_source)
+            print(result['content'])
+            obj.quit()
+        except Exception as e:
+            result = {}
+            # result['orig_url'] = url
+            # result['status_code'] = 500
+            # result['url'] = url
+            # result['cookies'] = {}
+            result = {'orig_url':url, 'status_code':500, 'url':url, 'cookies':{}, 'time':time.time() - start_time, 'save':task_fetch.get('save')}
+        raise gen.Return(result)
+
+
+    @gen.coroutine
+    def chrome_fetch(self, url, task):
+        '''chrome fetcher'''
+        start_time = time.time()
+        result = {}
+        # result['orig_url'] = url
+        task_fetch = task.get('fetch', {})
+        try:           
+            chrome_options = Options()
+            chrome_options.add_argument('window-size=1920x3000')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--hide-scrollbars')
+            chrome_options.add_argument('blink-settings=imagesEnabled=false')
+            chrome_options.add_argument('--headless')
+            chrome_options.binary_location = r"C:\\Users\\mengqy-a\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe"
+            driver = webdriver.Chrome(chrome_options=chrome_options)
+            driver.get(url)
+            # result['content'] = driver.page_source
+            # result['headers'] = {}
+            # result['status_code'] = 200
+            # result['url'] = driver.current_url or url
+            # result['cookies'] = {}
+            result = {'orig_url':url, 'content':driver.page_source, 'headers':{}, 'status_code':200, 'url':driver.current_url or url, 'cookies':{}, 'time':time.time() - start_time, 'save':task_fetch.get('save')}
+            driver.close()
+        except Exception as e:
+            result = {}
+            # result['orig_url'] = url
+            # result['status_code'] = 500
+            # result['url'] = url
+            # result['cookies'] = {}
+            result = {'orig_url':url, 'status_code':500, 'url':url, 'cookies':{}, 'time':time.time() - start_time, 'save':task_fetch.get('save')}
+        raise gen.Return(result)
+
+
 
     @gen.coroutine
     def http_fetch(self, url, task):
@@ -417,6 +510,8 @@ class Fetcher(object):
             result['time'] = time.time() - start_time
             result['cookies'] = session.get_dict()
             result['save'] = task_fetch.get('save')
+
+
             if not task.get('skip_fetcher'):
                 if response.error:
                     result['error'] = utils.text(response.error)
@@ -523,8 +618,6 @@ class Fetcher(object):
             raise gen.Return(handle_error(e))
 
         result['body'] = response.body
-        if result['status_code'] == 521:
-            result['status_code'] = 200
 
         if result.get('status_code', 200):
             logger.info("[%d] %s:%s %s %.2fs", result['status_code'],

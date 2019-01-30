@@ -207,7 +207,7 @@ def rebuild_response(r):
         time=r.get('time', 0),
         orig_url=r.get('orig_url', r.get('url', '')),
         js_script_result=r.get('js_script_result'),
-        save=r.get('save'),
+        save=r.get('save')
     )
     return response
 
