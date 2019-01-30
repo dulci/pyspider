@@ -37,6 +37,8 @@ from .cookie_utils import extract_cookies_to_jar
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 logger = logging.getLogger('fetcher')
 
@@ -346,35 +348,24 @@ class Fetcher(object):
         try:           
             dcap = dict(DesiredCapabilities.PHANTOMJS)
             dcap["phantomjs.page.settings.userAgent"] = ("Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; InfoPath.3)")
-            obj = webdriver.PhantomJS(desired_capabilities=dcap) #加载网址
+            obj = webdriver.PhantomJS(executable_path='/home/paas/local/software/phantomjs-2.1.1-linux-x86_64/bin/phantomjs', desired_capabilities=dcap) #加载网址
             obj.set_page_load_timeout(30)
             obj.maximize_window()
             obj.get(url)
+            # element = WebDriverWait(obj, 20, 1).until(
+            #     EC.(obj.page_source.startswith('<!DOCTYPE'))
+            #     )
             time.sleep(3)
-            num = 20
+            num = 27
             while not obj.page_source.startswith('<!DOCTYPE'):
                 time.sleep(1)
                 num = num -1
                 if num < 0:
                     break
-            # result['content'] = driver.page_source
-            # result['headers'] = {}
-            # result['status_code'] = 200
-            # result['url'] = driver.current_url or url
-            # result['cookies'] = {}
-            print(obj.page_source)
             result = {'orig_url':url, 'content':obj.page_source, 'headers':{}, 'status_code':200, 'url':obj.current_url or url, 'cookies':{}, 'time':time.time() - start_time, 'save':task_fetch.get('save')}
-            # if not result['content'].startswith('<!DOCTYPE'):
-            #     result['content'] = obj.page_source
-            #     print(obj.page_source)
-            print(result['content'])
             obj.quit()
         except Exception as e:
             result = {}
-            # result['orig_url'] = url
-            # result['status_code'] = 500
-            # result['url'] = url
-            # result['cookies'] = {}
             result = {'orig_url':url, 'status_code':500, 'url':url, 'cookies':{}, 'time':time.time() - start_time, 'save':task_fetch.get('save')}
         raise gen.Return(result)
 
