@@ -818,6 +818,7 @@ class Scheduler(object):
         self.xmlrpc_ioloop.start()
 
     def on_request(self, task):
+        time.sleep(0.1)
         if self.INQUEUE_LIMIT and len(self.projects[task['project']].task_queue) >= self.INQUEUE_LIMIT:
             logger.debug('overflow task %(project)s:%(taskid)s %(url)s', task)
             return
