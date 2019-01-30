@@ -212,7 +212,7 @@ class Scheduler(object):
         ):
             return
         for project in self.projectdb.check_update(self._last_update_project):
-            time.sleep(0.5)
+            time.sleep(0.1)
             self._update_project(project)
             logger.debug("project: %s updated.", project['name'])
         self._force_update_project = False
