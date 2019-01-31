@@ -425,6 +425,7 @@ class Scheduler(object):
             return False
         self._last_tick += 1
         for project in itervalues(self.projects):
+            time.sleep(0.1)
             if not project.active:
                 continue
             if project.waiting_get_info:
