@@ -425,7 +425,6 @@ class Scheduler(object):
             return False
         self._last_tick += 1
         for project in itervalues(self.projects):
-            time.sleep(0.1)
             if not project.active:
                 continue
             if project.waiting_get_info:
@@ -921,6 +920,7 @@ class Scheduler(object):
         return ret
 
     def on_task_done(self, task):
+        time.sleep(0.1)
         '''Called when a task is done and success, called by `on_task_status`'''
         task['status'] = self.taskdb.SUCCESS
         task['lastcrawltime'] = time.time()
