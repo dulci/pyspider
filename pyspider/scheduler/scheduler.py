@@ -833,9 +833,9 @@ class Scheduler(object):
     def on_new_request(self, task):
         '''Called when a new request is arrived'''
         task['status'] = self.taskdb.ACTIVE
-        time.sleep(0.1)
         self.insert_task(task)
         self.put_task(task)
+        time.sleep(0.1)
 
         project = task['project']
         self._cnt['5m'].event((project, 'pending'), +1)
