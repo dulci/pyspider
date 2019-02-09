@@ -58,6 +58,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         return data
 
     def save(self, project, taskid, url, result, group):
+        time.sleep(0.1)
         # 记录表保存
         tablename = "crawler_result_record"
         if project not in self.projects:
@@ -111,6 +112,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             return self._replace(tablename, **self._stringify(obj))
 
     def select(self, project, fields=None, offset=0, limit=None):
+        time.sleep(0.1)
         if project not in self.projects:
             self._list_project()
         if project not in self.projects:
@@ -123,6 +125,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             yield self._parse(task)
 
     def count(self, project):
+        time.sleep(0.1)
         if project not in self.projects:
             self._list_project()
         if project not in self.projects:
@@ -132,6 +135,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             return count
 
     def get(self, project, taskid, fields=None):
+        time.sleep(0.1)
         if project not in self.projects:
             self._list_project()
         if project not in self.projects:

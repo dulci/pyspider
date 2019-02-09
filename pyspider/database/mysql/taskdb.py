@@ -72,6 +72,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         return data
 
     def load_tasks(self, status, project=None, fields=None):
+        time.sleep(0.1)
         if project and project not in self.projects:
             return
         where = "`status` = %s" % self.placeholder
@@ -89,6 +90,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
                 yield self._parse(each)
 
     def get_task(self, project, taskid, fields=None):
+        time.sleep(0.1)
         if project not in self.projects:
             self._list_project()
         if project not in self.projects:
@@ -100,6 +102,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         return None
 
     def status_count(self, project):
+        time.sleep(0.1)
         result = dict()
         if project not in self.projects:
             self._list_project()
@@ -112,6 +115,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         return result
 
     def insert(self, project, taskid, obj={}):
+        time.sleep(0.1)
         if project not in self.projects:
             self._list_project()
         if project not in self.projects:
@@ -125,6 +129,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         return self._insert(tablename, **self._stringify(obj))
 
     def update(self, project, taskid, obj={}, **kwargs):
+        time.sleep(0.1)
         if project not in self.projects:
             self._list_project()
         if project not in self.projects:
