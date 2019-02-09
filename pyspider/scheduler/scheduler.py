@@ -1288,7 +1288,7 @@ class ThreadBaseScheduler(Scheduler):
         while True:
             if all(queue.empty() for queue in self.thread_queues):
                 break
-            time.sleep(0.1)
+            time.sleep(0.5)
 
     def _update_project(self, project):
         self._run_in_thread(Scheduler._update_project, self, project)
