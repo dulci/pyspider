@@ -14,7 +14,7 @@ class Handler(BaseHandler):
     def on_start(self):
         self.crawl('__START_URL__', callback=self.index_page)
 
-    @config(age=5 * 60)
+    @config(age=4 * 60)
     def index_page(self, response):
         for each in response.doc('a[href^="http"]').items():
             self.crawl(each.find('a').attr.href, callback=self.detail_page, skip_fetcher=True, save={'title': each.find('a').attr.title, 'publish_date': each.find('span').text()})
