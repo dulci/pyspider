@@ -20,12 +20,24 @@ from .app import app
 index_fields = ['name', 'group', 'status', 'comments', 'rate', 'burst', 'updatetime']
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
+    group = 'completion_delay_monitoring'
+    name = None
+    status = 'RUNNING'
+    if request.form:
+        group = request.form['group']
+        name = request.form['name']
+        status = request.form['status']
+    search_condition = {}
+    search_condition["group"] = group
+    if name:
+        search_condition["name"] = name
+    search_condition["status"] = status
     projectdb = app.config['projectdb']
-    projects = sorted(projectdb.get_all(fields=index_fields),
+    projects = sorted(projectdb.get_all(fields=index_fields, search_condition=search_condition),
                       key=lambda k: (0 if k['group'] else 1, k['group'] or '', k['name']))
-    return render_template("index.html", projects=projects)
+    return render_template("index.html", projects=projects, group=group, name=name, status=status)
 
 
 @app.route('/queues')

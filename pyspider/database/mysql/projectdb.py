@@ -51,9 +51,20 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
         ret = self._update(where="`name` = %s" % self.placeholder, where_values=(name, ), **obj)
         return ret.rowcount
 
-    def get_all(self, fields=None):
+    def get_all(self, fields=None, search_condition=None):
         time.sleep(0.1)
-        return self._select2dic(what=fields)
+        where = None
+        where_values = []
+        for condition in search_condition:
+            if not where:
+                if str(search_condition[condition]).lower() != 'all':
+                    where = "`" + condition + "` = %s"
+                    where_values.append(search_condition[condition])
+            else:
+                if str(search_condition[condition]).lower() != 'all':
+                    where += " and `" + condition + "` = %s"
+                    where_values.append(search_condition[condition])
+        return self._select2dic(what=fields, where=where, where_values=where_values)
 
     def get(self, name, fields=None):
         time.sleep(0.1)

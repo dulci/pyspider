@@ -108,6 +108,36 @@
           </div>
         </div>
       </div>
+      <div class="search-group">
+        <form method="post">
+          <span>
+            group：
+            <select name="group" id="search_group">
+              <option value="completion_delay_monitoring" selected="selected">completion_delay_monitoring</option>
+              <option value="business_miss_monitoring">business_miss_monitoring</option>
+              <option value="all">all</option>
+            </select>
+          </span>
+          <span>
+            project name：
+            <input name="name" id="search_name" />
+          </span>
+          <span>
+            status：
+            <select name="status" id="search_status">
+              <option value="ALL" selected="selected">ALL</option>
+              <option value="RUNNING">RUNNING</option>
+              <option value="DEBUG">DEBUG</option>
+              <option value="CHECKING">CHECKING</option>
+              <option value="STOP">STOP</option>
+              <option value="TODO">TODO</option>
+            </select>
+          </span>
+          <span>
+            <button type="submit" class="project-create btn btn-default btn-primary">Search</button>
+          </span>
+        </form>
+      </div>
       <table class="table sortable-theme-bootstrap projects">
         <thead>
           <tr>
@@ -184,6 +214,17 @@
     <script src="{{ url_for('cdn', path='sortable/0.6.0/js/sortable.min.js') }}"></script>
     <script src="{{ url_for('cdn', path='vue/1.0.26/vue.min.js') }}"></script>
     <script src="{{ url_for('static', filename='index.min.js') }}"></script>
+    <script type="application/javascript">
+      if ('{{ group }}' != 'None') {
+          $("#search_group").val('{{ group }}');
+      }
+      if ('{{ name }}' != 'None') {
+          $("#search_name").val('{{ name }}');
+      }
+      if ('{{ status }}' != 'None') {
+          $("#search_status").val('{{ status }}');
+      }
+    </script>
   </body>
 </html>
 <!-- vim: set et sw=2 ts=2 sts=2 ff=unix fenc=utf8 syntax=htmldjango: -->
