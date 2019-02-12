@@ -61,6 +61,7 @@ class ResultWorker(object):
                 logger.error(e)
                 continue
             except Exception as e:
+                logger.error(task['project'] + ":" + task['taskid'] + ":" + task['url'])
                 logger.exception(e)
                 continue
 
