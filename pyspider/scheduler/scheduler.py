@@ -1259,7 +1259,7 @@ class ThreadBaseScheduler(Scheduler):
         while True:
             method, args, kwargs = queue.get()
             try:
-                time.sleep(0.2)
+                time.sleep(0.1)
                 method(*args, **kwargs)
             except Exception as e:
                 logger.exception(e)
@@ -1292,7 +1292,7 @@ class ThreadBaseScheduler(Scheduler):
         while True:
             if all(queue.empty() for queue in self.thread_queues):
                 break
-            time.sleep(0.5)
+            time.sleep(0.1)
 
     def _update_project(self, project):
         self._run_in_thread(Scheduler._update_project, self, project)
