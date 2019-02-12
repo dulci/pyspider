@@ -861,10 +861,9 @@ class Scheduler(object):
 
         restart = False
         schedule_age = _schedule.get('age', self.default_schedule['age'])
-        logger.debug(schedule_age)
-        logger.debug(old_task.get('lastcrawltime', 0))
-        logger.debug(schedule_age + (old_task.get('lastcrawltime', 0) or 0))
-        logger.debug(now)
+        logger.info(schedule_age)
+        logger.info(old_task.get('lastcrawltime', 0))
+        logger.info(now)
         if _schedule.get('itag') and _schedule['itag'] != old_schedule.get('itag'):
             restart = True
         elif schedule_age >= 0 and schedule_age + (old_task.get('lastcrawltime', 0) or 0) < now:
@@ -873,7 +872,7 @@ class Scheduler(object):
             restart = True
 
         if not restart:
-            logger.debug('ignore newtask %(project)s:%(taskid)s %(url)s', task)
+            logger.info('ignore newtask %(project)s:%(taskid)s %(url)s', task)
             return
 
         if _schedule.get('cancel'):
