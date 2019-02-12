@@ -55,6 +55,14 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
         time.sleep(0.1)
         where = None
         where_values = []
+        page = 1
+        pageSize = 20
+        if search_condition:
+            page = search_condition['page']
+            pageSize = search_condition['pageSize']
+            del search_condition['page']
+            del search_condition['pageSize']
+        offset = (int(page) - 1) * int(pageSize)
         for condition in search_condition:
             if not where:
                 if str(search_condition[condition]).lower() != 'all':
@@ -64,7 +72,20 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
                 if str(search_condition[condition]).lower() != 'all':
                     where += " and `" + condition + "` = %s"
                     where_values.append(search_condition[condition])
-        return self._select2dic(what=fields, where=where, where_values=where_values)
+        return self._select2dic(what=fields, where=where, where_values=where_values, offset=offset, limit=int(pageSize))
+
+    def count(self, search_condition=None):
+        time.sleep(0.1)
+        where = None
+        for condition in search_condition:
+            if not where:
+                if str(search_condition[condition]).lower() != 'all':
+                    where = " where `" + condition + "` = '" + search_condition[condition] + "'"
+            else:
+                if str(search_condition[condition]).lower() != 'all':
+                    where += " and `" + condition + "` = '" + search_condition[condition] + "'"
+        for count, in self._execute("SELECT count(1) FROM %s %s" % (self.__tablename__, where)):
+            return count
 
     def get(self, name, fields=None):
         time.sleep(0.1)

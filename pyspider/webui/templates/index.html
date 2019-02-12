@@ -110,6 +110,8 @@
       </div>
       <div class="search-group">
         <form method="post">
+          <input type="hidden" name="page" id="page" value="{{ page }}" />
+          <input type="hidden" name="pageSize" value="{{ pageSize }}" />
           <span>
             group：
             <select name="group" id="search_group">
@@ -134,7 +136,16 @@
             </select>
           </span>
           <span>
-            <button type="submit" class="project-create btn btn-default btn-primary">Search</button>
+            <button id="submit" type="submit" class="project-create btn btn-default btn-primary">Search</button>
+          </span>
+          <span>
+            count: {{ count }} &nbsp; page: {{ page }} &nbsp; pageSize: {{ pageSize }} &nbsp; pages: {{ pages }}
+          </span>
+          <span>
+            <button type="button" id="btn_next" class="project-create btn btn-default btn-primary">next</button>
+          </span>
+          <span>
+            <button type="button" id="btn_previous" class="project-create btn btn-default btn-primary">previous</button>
           </span>
         </form>
       </div>

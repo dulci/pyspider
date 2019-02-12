@@ -6,6 +6,7 @@
 # Created on 2014-02-22 23:20:39
 
 import socket
+import math
 
 from six import iteritems, itervalues
 from flask import render_template, request, json
@@ -25,19 +26,27 @@ def index():
     group = 'completion_delay_monitoring'
     name = None
     status = 'RUNNING'
+    page = 1
+    pageSize = 20
     if request.form:
         group = request.form['group']
         name = request.form['name']
         status = request.form['status']
+        page = request.form['page']
+        pageSize = request.form['pageSize']
     search_condition = {}
     search_condition["group"] = group
     if name:
         search_condition["name"] = name
     search_condition["status"] = status
+    search_condition['page'] = page
+    search_condition['pageSize'] = pageSize
     projectdb = app.config['projectdb']
     projects = sorted(projectdb.get_all(fields=index_fields, search_condition=search_condition),
                       key=lambda k: (0 if k['group'] else 1, k['group'] or '', k['name']))
-    return render_template("index.html", projects=projects, group=group, name=name, status=status)
+    count = projectdb.count(search_condition)
+    pages = math.ceil(int(count)/int(pageSize))
+    return render_template("index.html", projects=projects, group=group, name=name, status=status, count=count, page=page, pageSize=pageSize, pages=pages)
 
 
 @app.route('/queues')
