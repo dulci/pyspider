@@ -129,6 +129,7 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         return self._insert(tablename, **self._stringify(obj))
 
     def update(self, project, taskid, obj={}, **kwargs):
+        time.sleep(0.2)
         if project not in self.projects:
             self._list_project()
         if project not in self.projects:
