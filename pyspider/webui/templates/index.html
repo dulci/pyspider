@@ -210,6 +210,9 @@
               {% raw %}
               <a class="btn btn-default btn-xs" href="/results?project={{ project.name }}" target=_blank>Results</a>
               {% endraw %}
+              {% raw %}
+              <a class="btn btn-default btn-xs" @click="project_clean(project, $event)">Clean</a>
+              {% endraw %}
               # endif
             </td>
           </tr>

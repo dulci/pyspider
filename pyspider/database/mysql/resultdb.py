@@ -145,3 +145,9 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         for task in self._select2dic(tablename, what=fields,
                                      where=where, where_values=(taskid, )):
             return self._parse(task)
+
+    def clean(self, project):
+        tablename = "crawler_result_record"
+        self._delete(tablename, where="project = %s", where_values=[project])
+        tablename = "completion_delay_monitoring_record"
+        self._delete(tablename, where="code = %s", where_values=[project])

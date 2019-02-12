@@ -169,6 +169,15 @@ def runtask():
     return json.dumps({"result": ret}), 200, {'Content-Type': 'application/json'}
 
 
+@app.route('/clean', methods=['POST', ])
+def clean():
+    taskdb = app.config['taskdb']
+    resultdb = app.config['resultdb']
+    project = request.form['project']
+    taskdb.clean(project)
+    resultdb.clean(project)
+    return json.dumps({"result": True}), 200, {'Content-Type': 'application/json'}
+
 @app.route('/robots.txt')
 def robots():
     return """User-agent: *

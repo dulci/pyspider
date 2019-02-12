@@ -144,3 +144,8 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
             where_values=(taskid, ),
             **self._stringify(obj)
         )
+
+    def clean(self, project):
+        tablename = self._tablename(project)
+        return self._delete(tablename, where="1=1")
+
