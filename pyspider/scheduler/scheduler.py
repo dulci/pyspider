@@ -872,7 +872,7 @@ class Scheduler(object):
             restart = True
 
         if not restart:
-            logger.info('ignore newtask %(project)s:%(taskid)s %(url)s', task)
+            logger.debug('ignore newtask %(project)s:%(taskid)s %(url)s', task)
             return
 
         if _schedule.get('cancel'):
