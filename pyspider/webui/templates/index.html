@@ -168,7 +168,11 @@
         <tbody>
         {% raw %}
           <tr v-cloak v-for="project in projects" data-name="{{* project.name }}">
-            <td class="project-group"><span>{{ project.group }}</span></td>
+            <td class="project-group">
+                <span class="group-{{ project.group }}" :data-value="project.group">
+                    {{ project.group }}
+                </span>
+            </td>
             <td class="project-name"><a href="/debug/{{* project.name }}">{{* project.name }}</a></td>
             <td class="project-status">
               <span class="status-{{ project.paused ? 'PAUSED' : project.status }}" :data-value="project.paused ? 'PAUSED' : project.status">
