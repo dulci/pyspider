@@ -23,9 +23,9 @@ index_fields = ['name', 'group', 'status', 'comments', 'rate', 'burst', 'updatet
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    group = 'completion_delay_monitoring'
+    group = 'all'
     name = None
-    status = 'RUNNING'
+    status = 'ALL'
     page = 1
     pageSize = 20
     if request.form:
