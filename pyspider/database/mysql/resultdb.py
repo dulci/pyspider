@@ -96,7 +96,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
                 'crawler_time': crawler_time
             }
             if 'publish_date' in result:
-                obj['publish_date'] = result['publish_date']
+                obj['publish_date'] = str(result['publish_date']).replace("年", "-").replace("月", "-").replace("日", "")
             return self._replace(tablename, **self._stringify(obj))
         elif group_name == 'business_miss_monitoring':
             # 行业监控表保存
