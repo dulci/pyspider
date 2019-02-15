@@ -348,22 +348,18 @@ class Fetcher(object):
         try:           
             dcap = dict(DesiredCapabilities.PHANTOMJS)
             dcap["phantomjs.page.settings.userAgent"] = ("Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; InfoPath.3)")
-            obj = webdriver.PhantomJS(executable_path='/home/paas/local/software/phantomjs-2.1.1-linux-x86_64/bin/phantomjs', desired_capabilities=dcap) #加载网址
-            # obj = webdriver.PhantomJS(executable_path='D:/phantomjs/phantomjs-2.1.1-windows/bin/phantomjs', desired_capabilities=dcap) #加载网址
+            # obj = webdriver.PhantomJS(executable_path='/home/paas/local/software/phantomjs-2.1.1-linux-x86_64/bin/phantomjs', desired_capabilities=dcap) #加载网址
+            obj = webdriver.PhantomJS(executable_path='D:/phantomjs/phantomjs-2.1.1-windows/bin/phantomjs', desired_capabilities=dcap) #加载网址
             obj.set_page_load_timeout(100)
             obj.maximize_window()
             obj.get(url)
             # element = WebDriverWait(obj, 20, 1).until(
             #     EC.(obj.page_source.startswith('<!DOCTYPE'))
             #     )
-            print("是否是find函数写错了")
-            print(obj.page_source)
-            print("发现的关键信息位置:"+(obj.page_source).find('共有相关信息'))
             time.sleep(3)
             num = 97
-            print("发现的关键信息位置:"+(obj.page_source).find('共有相关信息'))
             while (obj.page_source).find('共有相关信息') == -1:
-                print("----------没爬到列表页----------" + num)
+                print("----------没爬到列表页----------" + str(num))
                 time.sleep(1)
                 num = num -1
                 if num < 0:
