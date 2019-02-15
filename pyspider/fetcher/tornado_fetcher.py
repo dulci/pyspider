@@ -358,7 +358,7 @@ class Fetcher(object):
             #     )
             time.sleep(3)
             num = 97
-            while (obj.page_source).find('共有相关信息') == -1:
+            while (obj.page_source).find('下一页') == -1:
                 print("----------没爬到列表页----------" + str(num))
                 time.sleep(1)
                 num = num -1
