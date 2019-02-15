@@ -356,8 +356,10 @@ class Fetcher(object):
             # element = WebDriverWait(obj, 20, 1).until(
             #     EC.(obj.page_source.startswith('<!DOCTYPE'))
             #     )
+            print("发现的关键信息位置:"+obj.page_source.find('共有相关信息'))
             time.sleep(3)
             num = 97
+            print("发现的关键信息位置:"+obj.page_source.find('共有相关信息'))
             while obj.page_source.find('共有相关信息') == -1:
                 print("----------没爬到列表页----------" + num)
                 time.sleep(1)
