@@ -212,6 +212,7 @@ class Scheduler(object):
         ):
             return
         for project in self.projectdb.check_update(self._last_update_project):
+            time.sleep(0.1)
             self._update_project(project)
             logger.debug("project: %s updated.", project['name'])
         self._force_update_project = False
@@ -817,6 +818,7 @@ class Scheduler(object):
         self.xmlrpc_ioloop.start()
 
     def on_request(self, task):
+        time.sleep(0.1)
         if self.INQUEUE_LIMIT and len(self.projects[task['project']].task_queue) >= self.INQUEUE_LIMIT:
             logger.debug('overflow task %(project)s:%(taskid)s %(url)s', task)
             return
@@ -833,6 +835,7 @@ class Scheduler(object):
         task['status'] = self.taskdb.ACTIVE
         self.insert_task(task)
         self.put_task(task)
+        time.sleep(0.1)
 
         project = task['project']
         self._cnt['5m'].event((project, 'pending'), +1)
@@ -921,6 +924,7 @@ class Scheduler(object):
         return ret
 
     def on_task_done(self, task):
+        time.sleep(0.1)
         '''Called when a task is done and success, called by `on_task_status`'''
         task['status'] = self.taskdb.SUCCESS
         task['lastcrawltime'] = time.time()
@@ -1255,6 +1259,7 @@ class ThreadBaseScheduler(Scheduler):
         while True:
             method, args, kwargs = queue.get()
             try:
+                time.sleep(0.1)
                 method(*args, **kwargs)
             except Exception as e:
                 logger.exception(e)
@@ -1270,6 +1275,7 @@ class ThreadBaseScheduler(Scheduler):
                         break
                 else:
                     if block:
+                        time.sleep(0.1)
                         continue
                     else:
                         queue = self.thread_queues[random.randint(0, len(self.thread_queues)-1)]
