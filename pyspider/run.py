@@ -197,7 +197,7 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
                   out_queue=g.scheduler2fetcher, data_path=g.get('data_path', 'data'))
     if threads:
         kwargs['threads'] = int(threads)
-        print ('scheduler is running in' + kwargs['threads'] + ' threads.')
+        print ('scheduler is running in' + str(kwargs['threads']) + ' threads.')
 
     scheduler = Scheduler(**kwargs)
     scheduler.INQUEUE_LIMIT = inqueue_limit
