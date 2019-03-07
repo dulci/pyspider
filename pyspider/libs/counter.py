@@ -410,15 +410,21 @@ class CounterManager(DictMixin):
     def to_dict(self, get_value=None):
         """Dump counters as a dict"""
         self.trim()
-        result = {}
-        for key, value in iteritems(self.counters):
-            if get_value is not None:
-                value = getattr(value, get_value)
-            r = result
-            for _key in key[:-1]:
-                r = r.setdefault(_key, {})
-            r[key[-1]] = value
-        return result
+        return self._loop_counters(get_value)
+
+    def _loop_counters(self, get_value=None):
+        try:
+            result = {}
+            for key, value in iteritems(self.counters):
+                if get_value is not None:
+                    value = getattr(value, get_value)
+                r = result
+                for _key in key[:-1]:
+                    r = r.setdefault(_key, {})
+                r[key[-1]] = value
+            return result
+        except:
+            self._loop_counters(get_value)
 
     def dump(self, filename):
         """Dump counters to file"""
