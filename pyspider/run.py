@@ -20,6 +20,7 @@ import click
 import pyspider
 from pyspider.message_queue import connect_message_queue
 from pyspider.database import connect_database
+from pyspider.database import connect_database_cache
 from pyspider.libs import utils
 
 
@@ -42,6 +43,12 @@ def connect_db(ctx, param, value):
     if not value:
         return
     return utils.Get(lambda: connect_database(value))
+
+
+def connect_cache(ctx, param, value):
+    if not value:
+        return
+    return utils.Get(lambda: connect_database_cache(value))
 
 
 def load_cls(ctx, param, value):
@@ -74,6 +81,8 @@ def connect_rpc(ctx, param, value):
               help='database url for projectdb, default: sqlite')
 @click.option('--resultdb', envvar='RESULTDB', callback=connect_db,
               help='database url for resultdb, default: sqlite')
+@click.option('--projectcache', envvar='PROJECTREDISDB', callback=connect_cache,
+              help='redis url for projectdb cache, default: None')
 @click.option('--message-queue', envvar='AMQP_URL',
               help='connection url to message queue, '
               'default: builtin multiprocessing.Queue')
@@ -192,7 +201,7 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
     g = ctx.obj
     Scheduler = load_cls(None, None, scheduler_cls)
 
-    kwargs = dict(taskdb=g.taskdb, projectdb=g.projectdb, resultdb=g.resultdb,
+    kwargs = dict(taskdb=g.taskdb, projectdb=g.projectdb, projectcache=g.projectcache, resultdb=g.resultdb,
                   newtask_queue=g.newtask_queue, status_queue=g.status_queue,
                   out_queue=g.scheduler2fetcher, data_path=g.get('data_path', 'data'))
     if threads:

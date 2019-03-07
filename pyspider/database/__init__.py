@@ -198,3 +198,23 @@ def _connect_elasticsearch(parsed, dbtype):
     elif dbtype == 'taskdb':
         from .elasticsearch.taskdb import TaskDB
         return TaskDB([parsed.netloc], index=index)
+
+
+def connect_database_cache(url):
+    redis = _connect_database_cache(url)
+    redis.copy = lambda: _connect_database_cache(url)
+    return redis
+
+def _connect_database_cache(url):
+    parsed = urlparse(url)
+    scheme = parsed.scheme.split('+')
+    if len(scheme) == 1:
+        raise Exception('wrong scheme format: %s' % parsed.scheme)
+    else:
+        engine, dbtype = scheme[0], scheme[-1]
+    if engine == 'redis' and dbtype == 'projectcache':
+        from .redis.projectcache import ProjectCache
+        return ProjectCache(parsed.hostname, parsed.port,
+                      int(parsed.path.strip('/') or 0))
+    else:
+        return None
