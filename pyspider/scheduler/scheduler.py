@@ -123,8 +123,7 @@ class Project(object):
             self.task_queue.rate = 0
             self.task_queue.burst = 0
 
-        print('project %s updated, status:%s, paused:%s, %d tasks',
-                    self.name, self.db_status, self.paused, len(self.task_queue))
+        print('project %s updated, status:%s, paused:%s, %d tasks'%(self.name, self.db_status, self.paused, len(self.task_queue)))
 
     def on_get_info(self, info):
         self.waiting_get_info = False
@@ -359,9 +358,7 @@ class Scheduler(object):
                         continue
                     project = self.projects[task['project']]
                     project.on_get_info(task['track'].get('save') or {})
-                    print(
-                        '%s on_get_info %r', task['project'], task['track'].get('save', {})
-                    )
+                    print('%s on_get_info %r'%(task['project'], task['track'].get('save', {})))
                     continue
                 elif not self.task_verify(task):
                     continue
@@ -815,7 +812,7 @@ class Scheduler(object):
         self.xmlrpc_ioloop = tornado.ioloop.IOLoop()
         self.xmlrpc_server = tornado.httpserver.HTTPServer(container, io_loop=self.xmlrpc_ioloop)
         self.xmlrpc_server.listen(port=port, address=bind)
-        print('scheduler.xmlrpc listening on %s:%s', bind, port)
+        print('scheduler.xmlrpc listening on %s:%s'%(bind, port))
         self.xmlrpc_ioloop.start()
 
     def on_request(self, task):
@@ -843,7 +840,7 @@ class Scheduler(object):
         self._cnt['1h'].event((project, 'pending'), +1)
         self._cnt['1d'].event((project, 'pending'), +1)
         self._cnt['all'].event((project, 'pending'), +1)
-        print('new task %(project)s:%(taskid)s %(url)s', task)
+        print('new task %s:%s %(url)s'%(task['project'], task['taskid']))
         return task
 
     def on_old_request(self, task, old_task):
@@ -856,7 +853,7 @@ class Scheduler(object):
         if _schedule.get('force_update') and self.projects[task['project']].task_queue.is_processing(task['taskid']):
             # when a task is in processing, the modify may conflict with the running task.
             # postpone the modify after task finished.
-            print('postpone modify task %(project)s:%(taskid)s %(url)s', task)
+            print('postpone modify task %s:%s %(url)s'%(task['project'], task['taskid']))
             self._postpone_request.append(task)
             return
 
@@ -877,7 +874,7 @@ class Scheduler(object):
             return
 
         if _schedule.get('cancel'):
-            print('cancel task %(project)s:%(taskid)s %(url)s', task)
+            print('cancel task %s:%s %(url)s'%(task['project'], task['taskid']))
             task['status'] = self.taskdb.BAD
             self.update_task(task)
             self.projects[task['project']].task_queue.delete(task['taskid'])
@@ -896,7 +893,7 @@ class Scheduler(object):
             self._cnt['all'].event((project, 'success'), -1).event((project, 'pending'), +1)
         elif old_task['status'] == self.taskdb.FAILED:
             self._cnt['all'].event((project, 'failed'), -1).event((project, 'pending'), +1)
-        print('restart task %(project)s:%(taskid)s %(url)s', task)
+        print('restart task %s:%s %(url)s'%(task['project'], task['taskid']))
         return task
 
     def on_task_status(self, task):
@@ -904,7 +901,7 @@ class Scheduler(object):
         try:
             procesok = task['track']['process']['ok']
             if not self.projects[task['project']].task_queue.done(task['taskid']):
-                logging.error('not processing pack: %(project)s:%(taskid)s %(url)s', task)
+                logging.error('not processing pack: %s:%s %s'%(task['project'], task['taskid'], task['url']))
                 return None
         except KeyError as e:
             logger.error("Bad status pack: %s", e)
@@ -945,7 +942,7 @@ class Scheduler(object):
         self._cnt['1h'].event((project, 'success'), +1)
         self._cnt['1d'].event((project, 'success'), +1)
         self._cnt['all'].event((project, 'success'), +1).event((project, 'pending'), -1)
-        print('task done %(project)s:%(taskid)s %(url)s', task)
+        print('task done %s:%s %s'%(task['project'], task['taskid'], task['url']))
         return task
 
     def on_task_failed(self, task):
@@ -983,7 +980,7 @@ class Scheduler(object):
             self._cnt['1h'].event((project, 'failed'), +1)
             self._cnt['1d'].event((project, 'failed'), +1)
             self._cnt['all'].event((project, 'failed'), +1).event((project, 'pending'), -1)
-            print('task failed %(project)s:%(taskid)s %(url)s' % task)
+            print('task failed %s:%s %s'%(task['project'], task['taskid'], task['url']))
             return task
         else:
             task['schedule']['retried'] = retried + 1
@@ -997,14 +994,13 @@ class Scheduler(object):
             self._cnt['1h'].event((project, 'retry'), +1)
             self._cnt['1d'].event((project, 'retry'), +1)
             # self._cnt['all'].event((project, 'retry'), +1)
-            print('task retry %d/%d %%(project)s:%%(taskid)s %%(url)s' % (
-                retried, retries), task)
+            print('task retry %d/%d %s:%s %s'%(retried, retries, task['project'], task['taskid'], task['url']))
             return task
 
     def on_select_task(self, task):
         '''Called when a task is selected to fetch & process'''
         # inject informations about project
-        print('select %(project)s:%(taskid)s %(url)s', task)
+        print('select %s:%s %s'%(task['project'], task['taskid'], task['url']))
 
         project_info = self.projects.get(task['project'])
         assert project_info, 'no such project'
