@@ -213,7 +213,7 @@ class Scheduler(object):
         ):
             return
         for project in self.projectdb.check_update(self._last_update_project):
-            time.sleep(0.02)
+            time.sleep(0.1)
             self._update_project(project)
             logger.debug("project: %s updated.", project['name'])
         self._force_update_project = False
@@ -269,7 +269,7 @@ class Scheduler(object):
         for task in self.taskdb.load_tasks(
                 self.taskdb.ACTIVE, project.name, self.scheduler_task_fields
         ):
-            time.sleep(0.02)
+            time.sleep(0.1)
             taskid = task['taskid']
             _schedule = task.get('schedule', self.default_schedule)
             priority = _schedule.get('priority', self.default_schedule['priority'])
