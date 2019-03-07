@@ -72,7 +72,6 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         return data
 
     def load_tasks(self, status, project=None, fields=None):
-        time.sleep(0.1)
         if project and project not in self.projects:
             return
         where = "`status` = %s" % self.placeholder
