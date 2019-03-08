@@ -62,6 +62,8 @@ class TaskDB(BaseTaskDB):
         for each in ('schedule', 'fetch', 'process', 'track'):
             if each in data:
                 data[each] = json.dumps(data[each])
+        if data.get('skip_fetcher') is not None:
+            data['skip_fetcher'] = str(data['skip_fetcher'])
         return data
 
     @property
