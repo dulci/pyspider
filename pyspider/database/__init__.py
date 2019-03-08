@@ -29,7 +29,7 @@ def connect_database(url):
         sqlalchemy+mysql+mysqlconnector+type://user:passwd@host:port/database
         more: http://docs.sqlalchemy.org/en/rel_0_9/core/engines.html
     redis:
-        redis+taskdb://host:port/db
+        redis+taskdb://:password@host:port/db
     elasticsearch:
         elasticsearch+type://host:port/?index=pyspider
     local:
@@ -75,7 +75,7 @@ def _connect_database(url):  # NOQA
     elif engine == 'redis':
         if dbtype == 'taskdb':
             from .redis.taskdb import TaskDB
-            return TaskDB(parsed.hostname, parsed.port,
+            return TaskDB(parsed.hostname, parsed.port, parsed.password,
                           int(parsed.path.strip('/') or 0))
         else:
             raise LookupError('not supported dbtype: %s', dbtype)

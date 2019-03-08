@@ -20,8 +20,8 @@ class TaskDB(BaseTaskDB):
     UPDATE_PROJECTS_TIME = 10 * 60
     __prefix__ = 'taskdb_'
 
-    def __init__(self, host='localhost', port=6379, db=0):
-        self.redis = redis.StrictRedis(host=host, port=port, db=db)
+    def __init__(self, host='localhost', port=6379, password=None, db=0):
+        self.redis = redis.StrictRedis(host=host, port=port, password=password, db=db)
         try:
             self.redis.scan(count=1)
             self.scan_available = True
