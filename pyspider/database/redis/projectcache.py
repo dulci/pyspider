@@ -20,8 +20,8 @@ class ProjectCache(BaseProjectDB):
     UPDATE_PROJECTS_TIME = 10 * 60
     __prefix__ = 'projectcache_'
 
-    def __init__(self, host='localhost', port=6379, db=0):
-        self.redis = redis.StrictRedis(host=host, port=port, db=db)
+    def __init__(self, host='localhost', port=6379, password=None, db=0):
+        self.redis = redis.StrictRedis(host=host, port=port, password=password, db=db)
         try:
             self.redis.scan(count=1)
             self.scan_available = True
@@ -64,112 +64,9 @@ class ProjectCache(BaseProjectDB):
                 data[each] = json.dumps(data[each])
         return data
 
-    @property
-    def projects(self):
-        if time.time() - getattr(self, '_last_update_projects', 0) \
-                > self.UPDATE_PROJECTS_TIME:
-            self._projects = set(utils.text(x) for x in self.redis.smembers(
-                self.__prefix__ + 'projects'))
-        return self._projects
+    def get_project_delay_level(self, project=None):
+        return int(self.redis.get(project)) if self.redis.get(project) is not None else 0
 
-    def load_tasks(self, status, project=None, fields=None):
-        if project is None:
-            project = self.projects
-        elif not isinstance(project, list):
-            project = [project, ]
+    def set_project_delay_level(self, project=None, value=1):
+        self.redis.set(project, value)
 
-        if self.scan_available:
-            scan_method = self.redis.sscan_iter
-        else:
-            scan_method = self.redis.smembers
-
-        if fields:
-            def get_method(key):
-                obj = self.redis.hmget(key, fields)
-                if all(x is None for x in obj):
-                    return None
-                return dict(zip(fields, obj))
-        else:
-            get_method = self.redis.hgetall
-
-        for p in project:
-            status_key = self._gen_status_key(p, status)
-            for taskid in scan_method(status_key):
-                obj = get_method(self._gen_key(p, utils.text(taskid)))
-                if not obj:
-                    #self.redis.srem(status_key, taskid)
-                    continue
-                else:
-                    yield self._parse(obj)
-
-    def get_task(self, project, taskid, fields=None):
-        if fields:
-            obj = self.redis.hmget(self._gen_key(project, taskid), fields)
-            if all(x is None for x in obj):
-                return None
-            obj = dict(zip(fields, obj))
-        else:
-            obj = self.redis.hgetall(self._gen_key(project, taskid))
-
-        if not obj:
-            return None
-        return self._parse(obj)
-
-    def status_count(self, project):
-        '''
-        return a dict
-        '''
-        pipe = self.redis.pipeline(transaction=False)
-        for status in range(1, 5):
-            pipe.scard(self._gen_status_key(project, status))
-        ret = pipe.execute()
-
-        result = {}
-        for status, count in enumerate(ret):
-            if count > 0:
-                result[status + 1] = count
-        return result
-
-    def insert(self, project, taskid, obj={}):
-        obj = dict(obj)
-        obj['taskid'] = taskid
-        obj['project'] = project
-        obj['updatetime'] = time.time()
-        obj.setdefault('status', self.ACTIVE)
-
-        task_key = self._gen_key(project, taskid)
-
-        pipe = self.redis.pipeline(transaction=False)
-        if project not in self.projects:
-            pipe.sadd(self.__prefix__ + 'projects', project)
-        pipe.hmset(task_key, self._stringify(obj))
-        pipe.sadd(self._gen_status_key(project, obj['status']), taskid)
-        pipe.execute()
-
-    def update(self, project, taskid, obj={}, **kwargs):
-        obj = dict(obj)
-        obj.update(kwargs)
-        obj['updatetime'] = time.time()
-
-        pipe = self.redis.pipeline(transaction=False)
-        pipe.hmset(self._gen_key(project, taskid), self._stringify(obj))
-        if 'status' in obj:
-            for status in range(1, 5):
-                if status == obj['status']:
-                    pipe.sadd(self._gen_status_key(project, status), taskid)
-                else:
-                    pipe.srem(self._gen_status_key(project, status), taskid)
-        pipe.execute()
-
-    def drop(self, project):
-        self.redis.srem(self.__prefix__ + 'projects', project)
-
-        if self.scan_available:
-            scan_method = self.redis.scan_iter
-        else:
-            scan_method = self.redis.keys
-
-        for each in itertools.tee(scan_method("%s%s_*" % (self.__prefix__, project)), 100):
-            each = list(each)
-            if each:
-                self.redis.delete(*each)

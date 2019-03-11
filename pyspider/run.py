@@ -307,7 +307,7 @@ def result_worker(ctx, result_cls, get_object=False):
     g = ctx.obj
     ResultWorker = load_cls(None, None, result_cls)
 
-    result_worker = ResultWorker(resultdb=g.resultdb, inqueue=g.processor2result)
+    result_worker = ResultWorker(resultdb=g.resultdb, inqueue=g.processor2result, projectcache=g.projectcache)
 
     g.instances.append(result_worker)
     if g.get('testing_mode') or get_object:

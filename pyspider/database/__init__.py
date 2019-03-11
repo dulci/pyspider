@@ -214,7 +214,7 @@ def _connect_database_cache(url):
         engine, dbtype = scheme[0], scheme[-1]
     if engine == 'redis' and dbtype == 'projectcache':
         from .redis.projectcache import ProjectCache
-        return ProjectCache(parsed.hostname, parsed.port,
+        return ProjectCache(parsed.hostname, parsed.port, parsed.password,
                       int(parsed.path.strip('/') or 0))
     else:
         return None

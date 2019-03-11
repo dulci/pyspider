@@ -862,10 +862,22 @@ class Scheduler(object):
             return
 
         restart = False
-        schedule_age = _schedule.get('age', self.default_schedule['age'])
-        # logger.info(schedule_age)
-        # logger.info(old_task.get('lastcrawltime', 0))
-        # logger.info(now)
+
+        age = _schedule.get('age', self.default_schedule['age'])
+        if self.projectcache is not None and age != -1:
+            # get delay level
+            delay_level = self.projectcache.get_project_delay_level(task['project'])
+            # calc delay level time
+            schedule_age = age + int((delay_level * 0.5) * age)
+            # max delay time is 2 days
+            if schedule_age > 172800:
+                schedule_age = 172800
+            logger.info('project %s delay info[age: %s, current delay level: %s, schedule_age: %s]'%(task['project'], str(age), str(delay_level), str(schedule_age)))
+            # add delay level
+            self.projectcache.set_project_delay_level(task['project'], delay_level + 1)
+        else:
+            schedule_age = age
+
         if _schedule.get('itag') and _schedule['itag'] != old_schedule.get('itag'):
             restart = True
         elif schedule_age >= 0 and schedule_age + (old_task.get('lastcrawltime', 0) or 0) < now:
@@ -1239,16 +1251,6 @@ class ThreadBaseScheduler(Scheduler):
     @projectdb.setter
     def projectdb(self, projectdb):
         self.local.projectdb = projectdb
-
-    @property
-    def projectcache(self):
-        if not hasattr(self.local, 'projectdb'):
-            self.projectcache = self._projectcache.copy()
-        return self.local.projectcache
-
-    @projectcache.setter
-    def projectcache(self, projectcache):
-        self.local.projectcache = projectcache
 
     @property
     def resultdb(self):

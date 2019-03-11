@@ -97,6 +97,15 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             }
             if 'publish_date' in result and str(result['publish_date']) != '':
                 obj['publish_date'] = str(result['publish_date']).replace("年", "-").replace("月", "-").replace("日", "").replace("[", "").replace("]", "")
+            if 'publish_date' in result and len(result['publish_date']) <= 5:
+                publish_date = str(result['publish_date']).replace("年", "-").replace("月", "-").replace("日", "").replace("[", "").replace("]", "").replace("\\", "-").replace("/", "-")
+                targetMonth = int(time.strftime("%m", time.strptime(publish_date.replace("\\", "-"), "%m-%d")))
+                currentMonth = int(time.strftime("%m", time.localtime(int(time.time()))))
+                if (currentMonth == 11 or currentMonth == 12) and (targetMonth == 1 or targetMonth == 2):
+                    year = int(time.strftime("%Y", time.localtime(int(time.time())))) + 1
+                else:
+                    year = int(time.strftime("%Y", time.localtime(int(time.time()))))
+                obj['publish_date'] = str(year) + "-" + publish_date
             return self._replace(tablename, **self._stringify(obj))
         elif group_name == 'business_miss_monitoring':
             # 行业监控表保存
