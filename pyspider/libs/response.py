@@ -141,6 +141,33 @@ class Response(object):
         return self._json
 
     @property
+    def fulldoc(self):
+        """Returns a PyQuery object of the response's text"""
+        if hasattr(self, '_fulldoc'):
+            return self._fulldoc
+        elements = self.fulletree
+        doc = self._fulldoc = PyQuery(elements)
+        doc.make_links_absolute(utils.text(self.url))
+        return doc
+
+    @property
+    def fulletree(self):
+        """Returns a lxml object of the response's text that can be selected by xpath"""
+        if not hasattr(self, '_fullelements'):
+            try:
+                parser = lxml.html.HTMLParser(encoding=self.encoding)
+                text = str(self.text).replace("</html>", "") + "</html>"
+                self._fullelements = lxml.html.fromstring(text, parser=parser)
+            except LookupError:
+                # lxml would raise LookupError when encoding not supported
+                # try fromstring without encoding instead.
+                # on windows, unicode is not availabe as encoding for lxml
+                self._fullelements = lxml.html.fromstring(self.text)
+        if isinstance(self._fullelements, lxml.etree._ElementTree):
+            self._fullelements = self._fullelements.getroot()
+        return self._fullelements
+
+    @property
     def doc(self):
         """Returns a PyQuery object of the response's content"""
         if hasattr(self, '_doc'):
