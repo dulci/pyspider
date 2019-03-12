@@ -175,3 +175,6 @@ class TaskDB(BaseTaskDB):
             each = list(each)
             if each:
                 self.redis.delete(*each)
+
+    def clean(self, project):
+        self.drop(project)
