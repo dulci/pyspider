@@ -874,7 +874,11 @@ class Scheduler(object):
                 schedule_age = 43200
             logger.info('project %s delay info[age: %s, current delay level: %s, schedule_age: %s]'%(task['project'], str(age), str(delay_level), str(schedule_age)))
             # add delay level
-            self.projectcache.set_project_delay_level(task['project'], delay_level + 1)
+            if (delay_level + 1) < 20:
+                delay_level = delay_level + 1
+            else:
+                delay_level = 0
+            self.projectcache.set_project_delay_level(task['project'], delay_level)
         else:
             schedule_age = age
 
