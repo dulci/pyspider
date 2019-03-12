@@ -869,9 +869,9 @@ class Scheduler(object):
             delay_level = self.projectcache.get_project_delay_level(task['project'])
             # calc delay level time
             schedule_age = age + int((delay_level * 0.5) * age)
-            # max delay time is 2 days
-            if schedule_age > 172800:
-                schedule_age = 172800
+            # max delay time is 0.5 days
+            if schedule_age > 43200:
+                schedule_age = 43200
             logger.info('project %s delay info[age: %s, current delay level: %s, schedule_age: %s]'%(task['project'], str(age), str(delay_level), str(schedule_age)))
             # add delay level
             self.projectcache.set_project_delay_level(task['project'], delay_level + 1)

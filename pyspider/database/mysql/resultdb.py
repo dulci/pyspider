@@ -145,11 +145,11 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
 
     def get(self, project, taskid, fields=None):
         time.sleep(0.1)
-        if project not in self.projects:
-            self._list_project()
-        if project not in self.projects:
-            return
-        tablename = self._tablename(project)
+        # if project not in self.projects:
+        #     self._list_project()
+        # if project not in self.projects:
+        #     return
+        tablename = "crawler_result_record"
         where = "`taskid` = %s" % self.placeholder
         for task in self._select2dic(tablename, what=fields,
                                      where=where, where_values=(taskid, )):

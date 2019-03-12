@@ -19,13 +19,19 @@ class ResultWorker(object):
     override this if needed.
     """
 
-    def __init__(self, resultdb, inqueue, projectcache=None):
+    def __init__(self, taskdb, resultdb, inqueue, projectcache=None):
+        self.taskdb = taskdb
         self.resultdb = resultdb
         self.projectcache = projectcache
         self.inqueue = inqueue
         self._quit = False
 
     def on_result(self, task, result):
+        # repeat check
+        oldTask = self.resultdb.get(task['project'], task['taskid'])
+        if oldTask is not None:
+            return
+
         # reset project delay level
         if self.projectcache is not None:
             self.projectcache.set_project_delay_level(task['project'], 0)
