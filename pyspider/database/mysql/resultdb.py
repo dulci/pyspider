@@ -92,7 +92,9 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
                 'code': project,
                 'website_type': website_type,
                 'title': str(result['title']).strip(),
-                'crawler_time': crawler_time
+                'crawler_time': crawler_time,
+                'taskid': taskid,
+                'url': url,
             }
             if 'publish_date' in result and str(result['publish_date']) != '':
                 obj['publish_date'] = str(result['publish_date']).replace("年", "-").replace("月", "-").replace("日", "").replace("[", "").replace("]", "")
