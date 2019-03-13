@@ -150,7 +150,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         # if project not in self.projects:
         #     return
         tablename = "crawler_result_record"
-        where = "`taskid` = %s and project = %s" % self.placeholder
+        where = "`taskid` = %s and project = %s"
         for task in self._select2dic(tablename, what=fields,
                                      where=where, where_values=(taskid, project,)):
             return self._parse(task)
