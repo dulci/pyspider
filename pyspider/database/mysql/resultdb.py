@@ -98,7 +98,7 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             }
             if 'publish_date' in result and str(result['publish_date']) != '':
                 obj['publish_date'] = str(result['publish_date']).replace("年", "-").replace("月", "-").replace("日", "").replace("[", "").replace("]", "")
-            if 'publish_date' in result and len(result['publish_date']) <= 5:
+            if 'publish_date' in result and str(result['publish_date']) != '' and len(result['publish_date']) <= 5:
                 publish_date = str(result['publish_date']).replace("年", "-").replace("月", "-").replace("日", "").replace("[", "").replace("]", "").replace("\\", "-").replace("/", "-")
                 targetMonth = int(time.strftime("%m", time.strptime(publish_date.replace("\\", "-"), "%m-%d")))
                 currentMonth = int(time.strftime("%m", time.localtime(int(time.time()))))
