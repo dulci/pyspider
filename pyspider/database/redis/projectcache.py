@@ -67,6 +67,6 @@ class ProjectCache(BaseProjectDB):
     def get_project_delay_level(self, project=None):
         return int(self.redis.get(project)) if self.redis.get(project) is not None else 0
 
-    def set_project_delay_level(self, project=None, value=1):
+    def set_project_delay_level(self, project=None, value=0):
         self.redis.set(project, value)
 

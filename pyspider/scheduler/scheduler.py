@@ -215,6 +215,8 @@ class Scheduler(object):
         for project in self.projectdb.check_update(self._last_update_project):
             self._update_project(project)
             logger.debug("project: %s updated.", project['name'])
+            if self.projectcache:
+                self.projectcache.set_project_delay_level(project['name'], 0)
         self._force_update_project = False
         self._last_update_project = now
 
