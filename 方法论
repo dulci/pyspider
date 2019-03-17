@@ -22,3 +22,17 @@
 # 1.用浏览器打开页面有列表，pyspider中web页面没有。解决办法：on_start的crawl方法中追加fetch_type='js'
 # 2.抓取返回599。解决办法：on_start的crawl方法中追加validate_cert=False
 # 3.列表页内容在原网站</html>标签之后。解决办法：将遍历语句中"response.doc('.secList li a').items()"中的doc改为fulldoc，"response.fulldoc('.secList li a').items()"
+# 4.如果遇到页面列表页是在iframe里，可以再写一级iframe的抓取，例如下列代码
+    @every(minutes=30)
+    def on_start(self):
+        self.crawl('http://111.39.159.134/laztb/jyxx/002001/002001006/002001006001/', callback=self.iframe_page)
+
+    @config(age=29 * 60)
+    def iframe_page(self, response):
+        for each in response.doc('.ewb-sub > iframe').items():
+            self.crawl(each.attr.src, callback=self.index_page)
+
+    @config(age=29 * 60)
+    def index_page(self, response):
+        for each in response.doc('a[href^="http"]').items():
+            self.crawl(each.attr.href, callback=self.detail_page, skip_fetcher=True, save={'title': each.attr.title, 'publish_date': each.find('span').text()})
