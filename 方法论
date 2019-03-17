@@ -16,7 +16,8 @@
 # 8.找到同级上一个元素 .prev()
 # 9.替换指定字符.replace("发布日期", "")
 # 10.去掉空格.strip()
-# 11.关于【li > a】与【li a】的区别，比如<li><a id="a1"></a><span><a id="a2"></a></span</li>，前者只会选择到直属的a标签(id1)，后者会选择到li下左右的a标签(id1和id2)
+# 11.含义某个属性的标签，比如含义title的标签，a[title]
+# 12.关于【li > a】与【li a】的区别，比如<li><a id="a1"></a><span><a id="a2"></a></span</li>，前者只会选择到直属的a标签(id1)，后者会选择到li下左右的a标签(id1和id2)
 #
 # 特殊情况
 # 1.用浏览器打开页面有列表，pyspider中web页面没有。解决办法：on_start的crawl方法中追加fetch_type='js'
