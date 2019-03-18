@@ -788,16 +788,23 @@ class Scheduler(object):
             return json.loads(json.dumps(result))
         application.register_function(get_active_tasks, 'get_active_tasks')
 
-        def get_projects_pause_status():
+        def get_projects_pause_status(projects):
             result = {}
-            for project_name, project in iteritems(self.projects):
+            iterprojects = dict()
+            if projects is not None and len(projects) != 0:
+                for project in projects:
+                    if self.projects.get(project) is not None:
+                        iterprojects[project] = self.projects[project]
+            else:
+                iterprojects = self.projects
+            for project_name, project in iteritems(iterprojects):
                 result[project_name] = project.paused
             return result
         application.register_function(get_projects_pause_status, 'get_projects_pause_status')
 
-        def webui_update():
+        def webui_update(projects):
             return {
-                'pause_status': get_projects_pause_status(),
+                'pause_status': get_projects_pause_status(projects),
                 'counter': {
                     '5m_time': dump_counter('5m_time', 'avg'),
                     '5m': dump_counter('5m', 'sum'),

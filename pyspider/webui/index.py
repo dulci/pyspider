@@ -113,13 +113,14 @@ def project_update():
 
 @app.route('/counter')
 def counter():
+    projects = str(request.values.get('projects')).split(",")
     rpc = app.config['scheduler_rpc']
     if rpc is None:
         return json.dumps({})
 
     result = {}
     try:
-        data = rpc.webui_update()
+        data = rpc.webui_update(projects)
         for type, counters in iteritems(data['counter']):
             for project, counter in iteritems(counters):
                 result.setdefault(project, {})[type] = counter
