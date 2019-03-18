@@ -121,11 +121,13 @@ def counter():
     result = {}
     try:
         data = rpc.webui_update(projects)
-        for type, counters in iteritems(data['counter']):
-            for project, counter in iteritems(counters):
-                result.setdefault(project, {})[type] = counter
-        for project, paused in iteritems(data['pause_status']):
-            result.setdefault(project, {})['paused'] = paused
+        if data.get('counter') is not None:
+            for type, counters in iteritems(data['counter']):
+                for project, counter in iteritems(counters):
+                    result.setdefault(project, {})[type] = counter
+        if data.get('pause_status') is not None:
+            for project, paused in iteritems(data['pause_status']):
+                result.setdefault(project, {})['paused'] = paused
     except socket.error as e:
         app.logger.warning('connect to scheduler rpc error: %r', e)
         return json.dumps({}), 200, {'Content-Type': 'application/json'}
