@@ -39,9 +39,15 @@
     <section id="control">
       <div class="title pull-left"><a href="/">pyspider</a> &gt; {{ project_name }}</div>
       <div class="pull-right">
+        <span>修改成功按钮变为绿色，失败变为红色</span>
+        <input type="hidden" name="projectName" id="projectName" value="{{ project_name }}" />
+        <button type="button" id="btn_modifyState" style="color: black">modifyState</button>
         <a href="http://docs.pyspider.org/" target="_blank">Documentation</a>
         <span class="webdav-btn">WebDAV Mode</span>
       </div>
+{#      <div>#}
+{#            <button type="button" id="btn_modifyState" class="project-create btn btn-default btn-primary">modifyState</button>#}
+{#      </div>#}
     </section>
     <section id="editarea">
       <div id="left-area" class="debug-panel" style="right: 50%">
@@ -102,6 +108,7 @@
       var script_content = {{ script | tojson | safe }};
     </script>
     <script src="{{ url_for('static', filename='debug.min.js') }}"></script>
+{#    <script src="{{ url_for('static', filename='src/debug.js') }}"></script>#}
   </body>
 </html>
 <!-- vim: set et sw=2 ts=2 sts=2 ff=unix fenc=utf8 syntax=htmldjango: -->

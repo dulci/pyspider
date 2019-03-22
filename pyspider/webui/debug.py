@@ -166,6 +166,50 @@ def run(project):
         return json.dumps(utils.unicode_obj(result)), 200, {'Content-Type': 'application/json'}
 
 
+@app.route('/debug/<project>/modifyState', methods=['POST', ])
+def modifyState(project):
+    projectdb = app.config['projectdb']
+    if not projectdb.verify_project_name(project):
+        return 'project name is not allowed!', 400
+    project_info = projectdb.get(project, fields=['name', 'status', 'group'])
+    if project_info and 'lock' in projectdb.split_group(project_info.get('group')) \
+            and not login.current_user.is_active():
+        return app.login_response
+
+    if project_info:
+        info = {'status': 'RUNNING', 'group':'completion_delay_monitoring'}
+        projectdb.update(project, info)
+    else:
+        return "no such project.", 404
+
+    rpc = app.config['scheduler_rpc']
+    if rpc is None:
+        return json.dumps({})
+
+    newtask = {
+        "project": project,
+        "taskid": "on_start",
+        "url": "data:,on_start",
+        "process": {
+            "callback": "on_start",
+        },
+        "schedule": {
+            "age": 0,
+            "priority": 9,
+            "force_update": True,
+        },
+    }
+
+    try:
+        ret = rpc.newtask(newtask)
+    except socket.error as e:
+        app.logger.warning('connect to scheduler rpc error: %r', e)
+        return json.dumps({"result": False}), 200, {'Content-Type': 'application/json'}
+    return json.dumps({"result": ret}), 200, {'Content-Type': 'application/json'}
+
+
+
+
 @app.route('/debug/<project>/save', methods=['POST', ])
 def save(project):
     projectdb = app.config['projectdb']

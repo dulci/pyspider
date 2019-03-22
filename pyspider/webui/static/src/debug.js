@@ -242,6 +242,7 @@ window.Debugger = (function() {
       this.bind_run();
       this.bind_save();
       this.bind_others();
+      this.bind_modifyState();
 
       // css selector helper
       SelectorHelper.init();
@@ -342,6 +343,23 @@ window.Debugger = (function() {
       });
     },
 
+    bind_modifyState: function() {
+      $('#btn_modifyState').click(function () {
+        $.ajax({
+          type: "POST",
+          url: location.pathname+'/modifyState',
+          success: function(data) {
+            console.log(data)
+            document.getElementById("btn_modifyState").setAttribute("style", "color: green")
+          },
+          error: function(xhr, textStatus, errorThrown) {
+            console.log(xhr, textStatus, errorThrown);
+            document.getElementById("btn_modifyState").setAttribute("style", "color: red")
+          }
+        });
+      });
+    },
+
     bind_run: function() {
       var _this = this;
       $('#run-task-btn').on('click', function() {
@@ -422,6 +440,7 @@ window.Debugger = (function() {
 
     bind_others: function() {
       var _this = this;
+
       $('#python-log-show').on('click', function() {
         if ($('#python-log pre').is(":visible")) {
           $('#python-log pre').hide();
