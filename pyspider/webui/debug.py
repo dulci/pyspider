@@ -220,7 +220,7 @@ def copyScript(project):
             and not login.current_user.is_active():
         return app.login_response
     link = re.search(r'self.crawl\(\'.*\',', script).group()[12:-2]
-    common_link = link[:link.rfind('/')]
+    common_link = link[:link.find('/', 7)]
     if common_link == None or common_link == '':
         common_link = link[:link.find('?')]
     common_link = '%' + common_link + '%'
