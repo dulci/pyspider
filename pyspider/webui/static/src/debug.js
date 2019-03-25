@@ -243,6 +243,7 @@ window.Debugger = (function() {
       this.bind_save();
       this.bind_others();
       this.bind_modifyState();
+      this.bind_copyScript();
 
       // css selector helper
       SelectorHelper.init();
@@ -355,6 +356,28 @@ window.Debugger = (function() {
           error: function(xhr, textStatus, errorThrown) {
             console.log(xhr, textStatus, errorThrown);
             document.getElementById("btn_modifyState").setAttribute("style", "color: red")
+          }
+        });
+      });
+    },
+
+    bind_copyScript: function() {
+      var _this = this;
+      $('#btn_copyScript').click(function () {
+        var script = _this.python_editor.getDoc().getValue();
+        $.ajax({
+          type: "POST",
+          url: location.pathname+'/copyScript',
+          data: {
+            script: script
+          },
+          success: function (data) {
+            console.log(data)
+            document.getElementById("btn_copyScript").setAttribute("style", "color: green")
+          },
+          error: function (xhr, textStatus, errorThrown) {
+            console.log(xhr, textStatus, errorThrown);
+            document.getElementById("btn_copyScript").setAttribute("style", "color: red")
           }
         });
       });

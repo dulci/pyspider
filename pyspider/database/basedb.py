@@ -38,6 +38,7 @@ class BaseDB:
         dbcur.execute(sql_query, values)
         return dbcur
 
+
     def _select(self, tablename=None, what="*", where="", where_values=[], offset=0, limit=None):
         tablename = self.escape(tablename or self.__tablename__)
         if isinstance(what, list) or isinstance(what, tuple) or what is None:

@@ -23,6 +23,7 @@ from pyspider.libs import utils, sample_handler, dataurl
 from pyspider.libs.response import rebuild_response
 from pyspider.processor.project_module import ProjectManager, ProjectFinder
 from .app import app
+import re
 
 default_task = {
     'taskid': 'data:,on_start',
@@ -207,6 +208,33 @@ def modifyState(project):
         return json.dumps({"result": False}), 200, {'Content-Type': 'application/json'}
     return json.dumps({"result": ret}), 200, {'Content-Type': 'application/json'}
 
+
+@app.route('/debug/<project>/copyScript', methods=['POST', ])
+def copyScript(project):
+    projectdb = app.config['projectdb']
+    if not projectdb.verify_project_name(project):
+        return 'project name is not allowed!', 400
+    script = request.form['script']
+    project_info = projectdb.get(project, fields=['name', 'status', 'group'])
+    if project_info and 'lock' in projectdb.split_group(project_info.get('group')) \
+            and not login.current_user.is_active():
+        return app.login_response
+    link = re.search(r'self.crawl\(\'.*\',', script).group()[12:-2]
+    common_link = link[:link.rfind('/')]
+    if common_link == None or common_link == '':
+        common_link = link[:link.find('?')]
+    common_link = '%' + common_link + '%'
+    if project_info:
+        update_list = {}
+        for project_i in projectdb.get_all_like('projectdb', ['name', 'script'], "status != 'RUNNING' and name != %s and script like %s", [project, common_link]):
+            link_i = re.search(r'self.crawl\(\'.*\',', project_i[1]).group()
+            info = {'script': re.sub(r'self.crawl\(\'.*\',', link_i, script)}
+            update_list[project_i[0]] = info
+        for key in update_list:
+            projectdb.update(key, update_list[key])
+    else:
+        return "no such project.", 404
+    return "ok", 200
 
 
 

@@ -74,6 +74,11 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
                     where_values.append(search_condition[condition])
         return self._select2dic(what=fields, where=where, where_values=where_values, offset=offset, limit=int(pageSize))
 
+    def get_all_like(self, table_name, what, where, where_values=[]):
+        return self._select(table_name, what, where, where_values)
+
+
+
     def count(self, search_condition=None):
         time.sleep(0.1)
         where = None
