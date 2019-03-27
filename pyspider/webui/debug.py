@@ -219,7 +219,7 @@ def copyScript(project):
     if project_info and 'lock' in projectdb.split_group(project_info.get('group')) \
             and not login.current_user.is_active():
         return app.login_response
-    link = re.search(r'self.crawl\(\'.*\',', script).group()[12:-2]
+    link = re.search(r'self.crawl\(\'[^,]\',', script).group()[12:-2]
     common_link = link[:link.find('/', 8)]
     if common_link == None or common_link == '':
         common_link = link[:link.find('?')]
