@@ -227,8 +227,8 @@ def copyScript(project):
     if project_info:
         update_list = {}
         for project_i in projectdb.get_all_like('projectdb', ['name', 'script'], "status != 'RUNNING' and name != %s and script like %s", [project, common_link]):
-            link_i = re.search(r'self.crawl\(\'.*\',', project_i[1]).group()
-            info = {'script': re.sub(r'self.crawl\(\'.*\',', link_i, script)}
+            link_i = re.search(r'self.crawl\(\'[^,]\',', project_i[1]).group()
+            info = {'script': re.sub(r'self.crawl\(\'[^,]\',', link_i, script)}
             update_list[project_i[0]] = info
         for key in update_list:
             projectdb.update(key, update_list[key])
