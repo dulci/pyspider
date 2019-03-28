@@ -219,7 +219,7 @@ def copyScript(project):
     if project_info and 'lock' in projectdb.split_group(project_info.get('group')) \
             and not login.current_user.is_active():
         return app.login_response
-    link = re.search(r'self.crawl\(\'.*?\',', script).group()[12:-2]
+    link = re.search(r'self.crawl\([\'\"].*?[\'\"],', script).group()[12:-2]
     common_link = link[:link.find('/', 8)]
     if common_link == None or common_link == '':
         common_link = link[:link.find('?')]
@@ -227,8 +227,8 @@ def copyScript(project):
     if project_info:
         update_list = {}
         for project_i in projectdb.get_all_like('projectdb', ['name', 'script'], "status != 'RUNNING' and name != %s and script like %s", [project, common_link]):
-            link_i = re.search(r'self.crawl\(\'.*?\',', project_i[1]).group()
-            info = {'script': re.sub(r'self.crawl\(\'.*?\',', link_i, script)}
+            link_i = re.search(r'self.crawl\([\'\"].*?[\'\"],', project_i[1]).group()
+            info = {'script': re.sub(r'self.crawl\([\'\"].*?[\'\"],', link_i, script)}
             update_list[project_i[0]] = info
         for key in update_list:
             projectdb.update(key, update_list[key])
