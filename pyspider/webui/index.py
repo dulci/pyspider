@@ -18,7 +18,7 @@ except ImportError:
 
 from .app import app
 
-index_fields = ['name', 'group', 'status', 'comments', 'rate', 'burst', 'updatetime']
+index_fields = ['name', 'group', 'status', 'comments', 'rate', 'burst', 'updatetime', 'remark']
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -64,6 +64,28 @@ def get_queues():
     for key in queues:
         result[key] = try_get_qsize(queues[key])
     return json.dumps(result), 200, {'Content-Type': 'application/json'}
+
+@app.route('/update_remark', methods=['POST', ])
+def remark_update():
+    projectdb = app.config['projectdb']
+    project = request.form['pk']
+    name = request.form['name']
+    remark = request.form['value']
+
+    project_info = projectdb.get(project, fields=('name', 'group'))
+    if not project_info:
+        return "no such project.", 404
+    if 'lock' in projectdb.split_group(project_info.get('group')) \
+            and not login.current_user.is_active():
+        return app.login_response
+    try:
+        update = {name : remark}
+        projectdb.update(project, update)
+        return 'ok', 200
+    except Exception as e:
+        return e, 500
+
+
 
 
 @app.route('/update', methods=['POST', ])

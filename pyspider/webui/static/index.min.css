@@ -29,7 +29,12 @@ header .alert {
 }
 
 .projects .project-name {
-    font-weight: 700
+    font-weight: 700;
+    width: 300px
+}
+
+.project .project-remark {
+    width: 400px
 }
 
 .projects .project-status {

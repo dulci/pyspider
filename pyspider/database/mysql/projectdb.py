@@ -34,7 +34,8 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
             `rate` float(11, 4),
             `burst` float(11, 4),
             `updatetime` double(16, 4),
-            `skip_fetcher` int(11)
+            `skip_fetcher` int(11),
+            `remark` varchar(512)
             ) ENGINE=InnoDB CHARSET=utf8''' % self.escape(self.__tablename__))
 
     def insert(self, name, obj={}):
