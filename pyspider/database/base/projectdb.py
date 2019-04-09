@@ -59,7 +59,7 @@ class ProjectDB(object):
             return re.split("\W+", group or '')
 
     def verify_project_name(self, name):
-        if len(name) > 64:
+        if len(name) > 100:
             return False
         if re.search(r"[^\w]", name):
             return False
