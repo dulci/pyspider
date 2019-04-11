@@ -153,7 +153,7 @@ def cli(ctx, **kwargs):
         kwargs['message_queue'] = "beanstalk://%s/" % kwargs['beanstalk']
 
     for name in ('newtask_queue', 'status_queue', 'scheduler2fetcher',
-                 'fetcher2processor', 'processor2result'):
+                 'fetcher2processor', 'processor2result', 'content_queue'):
         if kwargs.get('message_queue'):
             kwargs[name] = utils.Get(lambda name=name: connect_message_queue(
                 name, kwargs.get('message_queue'), kwargs['queue_maxsize']))
@@ -285,7 +285,7 @@ def processor(ctx, processor_cls, process_time_limit, enable_stdout_capture=True
 
     processor = Processor(projectdb=g.projectdb,
                           inqueue=g.fetcher2processor, status_queue=g.status_queue,
-                          newtask_queue=g.newtask_queue, result_queue=g.processor2result,
+                          newtask_queue=g.newtask_queue, result_queue=g.processor2result, content_queue=g.content_queue,
                           enable_stdout_capture=enable_stdout_capture,
                           process_time_limit=process_time_limit)
 

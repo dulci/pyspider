@@ -435,6 +435,15 @@ class BaseHandler(object):
             pprint(result)
         if self.__env__.get('result_queue'):
             self.__env__['result_queue'].put((self.task, result))
+        if self.task["skip_fetcher"] == 0:
+            if self.__env__.get('content_queue'):
+                result_content = dict()
+                result_content['content'] = str(self.response.doc)
+                result_content['html'] = str(self.response.content)
+                result_content['fulldoc'] = str(self.response.fulldoc)
+                result_content['save'] = self.response.save
+                self.__env__['content_queue'].put((self.task, result_content))
+
 
     def on_finished(self, response, task):
         """
