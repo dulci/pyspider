@@ -348,8 +348,8 @@ class Fetcher(object):
         try:           
             dcap = dict(DesiredCapabilities.PHANTOMJS)
             dcap["phantomjs.page.settings.userAgent"] = ("Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; InfoPath.3)")
-            obj = webdriver.PhantomJS(executable_path='/home/paas/local/software/phantomjs-2.1.1-linux-x86_64/bin/phantomjs', desired_capabilities=dcap) #加载网址
-            # obj = webdriver.PhantomJS(executable_path='D:/phantomjs/phantomjs-2.1.1-windows/bin/phantomjs', desired_capabilities=dcap) #加载网址
+            # obj = webdriver.PhantomJS(executable_path='/home/paas/local/software/phantomjs-2.1.1-linux-x86_64/bin/phantomjs', desired_capabilities=dcap) #加载网址
+            obj = webdriver.PhantomJS(executable_path='D:/phantomjs/phantomjs-2.1.1-windows/bin/phantomjs', desired_capabilities=dcap) #加载网址
             obj.set_page_load_timeout(100)
             obj.maximize_window()
             obj.get(url)
@@ -612,6 +612,11 @@ class Fetcher(object):
             raise gen.Return(handle_error(e))
 
         result['body'] = response.body
+
+        # error错误为“Timeout before first response”时且页面获取正常时，放过去
+        if result.get('error', None) == 'Timeout before first response.' and result.get('status_code', None) == 599:
+            del result['error']
+            result['status_code'] = 200
 
         if result.get('status_code', 200):
             logger.info("[%d] %s:%s %s %.2fs", result['status_code'],
