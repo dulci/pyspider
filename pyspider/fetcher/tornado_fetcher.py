@@ -37,8 +37,13 @@ from .cookie_utils import extract_cookies_to_jar
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver import ActionChains
+from pyspider.libs.web_driver import Mydriver
+from pyspider.libs.web_drivers import WebDrivers
 import time
 logger = logging.getLogger('fetcher')
 
@@ -85,7 +90,7 @@ class Fetcher(object):
     splash_lua_source = open(os.path.join(os.path.dirname(__file__), "splash_fetcher.lua")).read()
     robot_txt_age = 60*60  # 1h
 
-    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True):
+    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None):
         self.inqueue = inqueue
         self.outqueue = outqueue
 
@@ -95,6 +100,8 @@ class Fetcher(object):
         self.proxy = proxy
         self.async_mode = async_mode
         self.ioloop = tornado.ioloop.IOLoop()
+        self.drivers = WebDrivers()
+        self.configure = configure
 
         self.robots_txt_cache = {}
 
@@ -145,6 +152,9 @@ class Fetcher(object):
             elif task.get('fetch', {}).get('fetch_type') in ('splash', ):
                 type = 'splash'
                 result = yield self.splash_fetch(url, task)
+            elif task.get('fetch', {}).get('fetch_type') in ('webdriver', ):
+                type = 'webdriver'
+                result = yield self.webdriver_fetch(url, task)
             elif task.get('fetch', {}).get('fetch_type') in ('chrome', 'ch'):
                 type = 'chrome'
                 result = yield self.chrome_fetch(url, task)
@@ -348,7 +358,7 @@ class Fetcher(object):
         try:           
             dcap = dict(DesiredCapabilities.PHANTOMJS)
             dcap["phantomjs.page.settings.userAgent"] = ("Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; InfoPath.3)")
-            obj = webdriver.PhantomJS(executable_path='/home/paas/local/software/phantomjs-2.1.1-linux-x86_64/bin/phantomjs', desired_capabilities=dcap) #加载网址
+            obj = webdriver.PhantomJS(executable_path='/Users/zhuyf/Software/phantomjs-2.1.1-macosx/bin/phantomjs', desired_capabilities=dcap) #加载网址
             # obj = webdriver.PhantomJS(executable_path='D:/phantomjs/phantomjs-2.1.1-windows/bin/phantomjs', desired_capabilities=dcap) #加载网址
             obj.set_page_load_timeout(100)
             obj.maximize_window()
@@ -414,7 +424,6 @@ class Fetcher(object):
         start_time = time.time()
         self.on_fetch('http', task)
         handle_error = lambda x: self.handle_error('http', url, task, start_time, x)
-
         # setup request parameters
         fetch = self.pack_tornado_request_parameters(url, task)
         task_fetch = task.get('fetch', {})
@@ -505,7 +514,6 @@ class Fetcher(object):
             result['cookies'] = session.get_dict()
             result['save'] = task_fetch.get('save')
 
-
             if not (True if str(task['skip_fetcher']).lower() == 'true' else False):
                 if response.error:
                     result['error'] = utils.text(response.error)
@@ -517,8 +525,80 @@ class Fetcher(object):
                     logger.warning("[%d] %s:%s %s %.2fs", response.code,
                                    task.get('project'), task.get('taskid'),
                                    url, result['time'])
-
+            result['configure'] = self.configure
+            result['project_name'] = task.get('project')
             raise gen.Return(result)
+
+    @gen.coroutine
+    def webdriver_fetch(self, url, task):
+        start_time = time.time()
+        self.on_fetch('phantomjs', task)
+        try:
+            if url is not None and (not task.get('fetch', {}).get('css_selector') and not task.get('fetch', {}).get('xpath_selector')):
+                driver = self.drivers.get_driver(task.get('project'), True)
+                driver.get(url)
+                origin_url = driver.current_url
+                content = bytes(driver.page_source, encoding = "utf8")
+                url = origin_url
+            elif task.get('fetch', {}).get('css_selector') or task.get('fetch', {}).get('xpath_selector'):
+                assert self.drivers.get_driver(task.get('project')), 'no webdriver'
+                driver = self.drivers.get_driver(task.get('project'))
+                # last_height = driver.execute_script("return document.body.scrollHeight")
+#                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                origin_url = driver.current_url
+                source_handle = driver.current_window_handle
+                if task.get('fetch', {}).get('css_selector'):
+                    WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, task.get('fetch', {}).get('css_selector'))))
+                    element = driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector'))
+                    driver.execute_script("arguments[0].scrollIntoView()", element)
+                    ActionChains(driver).move_to_element(element).click().perform()
+                    # driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector')).click()
+                    driver.switch_to_window(driver.window_handles[-1])
+                if task.get('fetch', {}).get('xpath_selector'):
+                    WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('xpath_selector'))))
+                    element = driver.find_element_by_xpath(task.get('fetch', {}).get('xpath_selector'))
+                    driver.execute_script("arguments[0].scrollIntoView()", element)
+                    ActionChains(driver).move_to_element(element).click().perform()
+                    # driver.find_element_by_xpath(task.get('fetch', {}).get('xpath_selector')).click()
+                    # time.sleep(1)
+                    driver.switch_to_window(driver.window_handles[-1])
+                window_handle = driver.current_window_handle
+                content = bytes(driver.page_source, encoding = "utf8")
+                url = driver.current_url
+                if task.get('fetch', {}).get('is_final'):
+                    if window_handle == source_handle:
+                        driver.back()
+                    else:
+                        driver.close()
+                        driver.switch_to_window(driver.window_handles[-1])
+            result = {
+                    "orig_url": origin_url,
+                    "content": content,
+                    "status_code": 200,
+                    "headers": {},
+                    "url": url,
+                    "cookies": {},
+                    "time": time.time() - start_time,
+                    "js_script_result": None,
+                    "save": task.get('fetch', {}).get('save')
+            }
+        except TimeoutException:
+            task.get('fetch', {}).get('document').execute_script('window.stop()')
+            result = {
+                    "orig_url": url,
+                    "content": "load page is timeout",
+                    "headers": {},
+                    "status_code": 504,
+                    "url": url,
+                    "time": time.time() - start_time,
+                    "cookies": {},
+                    "save": task.get('fetch', {}).get('save'),
+                    "save": task.get('fetch', {}).get('save')
+            }
+            logger.warning("[504] %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+        result['configure'] = self.configure
+        result['project_name'] = task.get('project')
+        raise gen.Return(result)
 
     @gen.coroutine
     def phantomjs_fetch(self, url, task):
@@ -526,7 +606,6 @@ class Fetcher(object):
         start_time = time.time()
         self.on_fetch('phantomjs', task)
         handle_error = lambda x: self.handle_error('phantomjs', url, task, start_time, x)
-
         # check phantomjs proxy is enabled
         if not self.phantomjs_proxy:
             result = {
@@ -537,9 +616,11 @@ class Fetcher(object):
                 "url": url,
                 "time": time.time() - start_time,
                 "cookies": {},
-                "save": task.get('fetch', {}).get('save')
+                "save": task.get('fetch', {}).get('save'),
+                "configure": self.configure
             }
             logger.warning("[501] %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            result['project_name'] = task.get('project')
             raise gen.Return(result)
 
         # setup request parameters
@@ -612,7 +693,6 @@ class Fetcher(object):
             raise gen.Return(handle_error(e))
 
         result['body'] = response.body
-
         if result.get('status_code', 200):
             logger.info("[%d] %s:%s %s %.2fs", result['status_code'],
                         task.get('project'), task.get('taskid'), url, result['time'])
@@ -620,7 +700,8 @@ class Fetcher(object):
             logger.error("[%d] %s:%s %s, %r %.2fs", result['status_code'],
                          task.get('project'), task.get('taskid'),
                          url, result['content'], result['time'])
-
+        result['configure'] = self.configure
+        result['project_name'] = task.get('project')
         raise gen.Return(result)
 
     @gen.coroutine
@@ -640,9 +721,12 @@ class Fetcher(object):
                 "url": url,
                 "time": time.time() - start_time,
                 "cookies": {},
-                "save": task.get('fetch', {}).get('save')
+                "save": task.get('fetch', {}).get('save'),
+                "configure": self.configure
             }
             logger.warning("[501] %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            result['configure'] = self.configure
+            result['project_name'] = task.get('project')
             raise gen.Return(result)
 
         # setup request parameters
@@ -728,7 +812,8 @@ class Fetcher(object):
             logger.error("[%d] %s:%s %s, %r %.2fs", result['status_code'],
                          task.get('project'), task.get('taskid'),
                          url, result['content'], result['time'])
-
+        result['configure'] = self.configure
+        result['project_name'] = task.get('project')
         raise gen.Return(result)
 
     def run(self):

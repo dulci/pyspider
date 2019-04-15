@@ -72,7 +72,7 @@ class ProjectDB(BaseProjectDB):
             logging.error('loading project script error: %s', e)
             return None
 
-    def get_all(self, fields=None):
+    def get_all(self, fields=None, search_condition=None):
         for projectname in self.projects:
             yield self.get(projectname, fields)
 

@@ -32,6 +32,9 @@ class ProjectDB(SQLiteMixin, BaseProjectDB, BaseDB):
         obj['name'] = name
         obj['updatetime'] = time.time()
         return self._insert(**obj)
+    
+    def count(self, search_condition=None):
+        return 0
 
     def update(self, name, obj={}, **kwargs):
         obj = dict(obj)
@@ -40,7 +43,7 @@ class ProjectDB(SQLiteMixin, BaseProjectDB, BaseDB):
         ret = self._update(where="`name` = %s" % self.placeholder, where_values=(name, ), **obj)
         return ret.rowcount
 
-    def get_all(self, fields=None):
+    def get_all(self, fields=None, search_condition=None):
         return self._select2dic(what=fields)
 
     def get(self, name, fields=None):

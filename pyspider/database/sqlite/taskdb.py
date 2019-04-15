@@ -32,7 +32,7 @@ class TaskDB(SQLiteMixin, SplitTableMixin, BaseTaskDB, BaseDB):
                 project,
                 url, status,
                 schedule, fetch, process, track,
-                lastcrawltime, updatetime
+                lastcrawltime, updatetime, skip_fetcher
                 )''' % tablename)
         self._execute(
             '''CREATE INDEX `status_%s_index` ON %s (status)'''

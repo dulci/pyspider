@@ -71,7 +71,7 @@ class ProjectDB(BaseProjectDB):
                                    .where(self.table.c.name == name)
                                    .values(**self._stringify(obj)))
 
-    def get_all(self, fields=None):
+    def get_all(self, fields=None, search_condition=None):
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
         for task in self.engine.execute(self.table.select()
                                         .with_only_columns(columns)):

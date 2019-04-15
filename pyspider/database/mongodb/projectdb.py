@@ -46,7 +46,7 @@ class ProjectDB(BaseProjectDB):
         obj['updatetime'] = time.time()
         return self.collection.update({'name': name}, {'$set': obj})
 
-    def get_all(self, fields=None):
+    def get_all(self, fields=None, search_condition=None):
         for each in self.collection.find({}, fields):
             if each and '_id' in each:
                 del each['_id']

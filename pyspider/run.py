@@ -111,32 +111,33 @@ def cli(ctx, **kwargs):
         if kwargs[db] is not None:
             continue
         if os.environ.get('MYSQL_NAME'):
-            kwargs[db] = utils.Get(lambda db=db: connect_database(
-                'sqlalchemy+mysql+%s://%s:%s/%s' % (
-                    db, os.environ['MYSQL_PORT_3306_TCP_ADDR'],
-                    os.environ['MYSQL_PORT_3306_TCP_PORT'], db)))
+            db_str = 'sqlalchemy+mysql+%s://%s:%s/%s' % (db, os.environ['MYSQL_PORT_3306_TCP_ADDR'], os.environ['MYSQL_PORT_3306_TCP_PORT'], db)
+            kwargs[db] = utils.Get(lambda db=db: connect_database(mysql_str))
+            kwargs['config'][db] = mysql_str
         elif os.environ.get('MONGODB_NAME'):
-            kwargs[db] = utils.Get(lambda db=db: connect_database(
-                'mongodb+%s://%s:%s/%s' % (
-                    db, os.environ['MONGODB_PORT_27017_TCP_ADDR'],
-                    os.environ['MONGODB_PORT_27017_TCP_PORT'], db)))
+            db_str = 'mongodb+%s://%s:%s/%s' % (db, os.environ['MONGODB_PORT_27017_TCP_ADDR'], os.environ['MONGODB_PORT_27017_TCP_PORT'], db)
+            kwargs[db] = utils.Get(lambda db=db: connect_database(mongo_str))
+            kwargs['config'][db] = mongodb_str
         elif ctx.invoked_subcommand == 'bench':
             if kwargs['data_path'] == './data':
                 kwargs['data_path'] += '/bench'
                 shutil.rmtree(kwargs['data_path'], ignore_errors=True)
                 os.mkdir(kwargs['data_path'])
             if db in ('taskdb', 'resultdb'):
-                kwargs[db] = utils.Get(lambda db=db: connect_database('sqlite+%s://' % (db)))
+                db_str = 'sqlite+%s://' % (db)
+                kwargs[db] = utils.Get(lambda db=db: connect_database(db_str))
+                kwargs['config'][db] = db_str
             elif db in ('projectdb', ):
-                kwargs[db] = utils.Get(lambda db=db: connect_database('local+%s://%s' % (
-                    db, os.path.join(os.path.dirname(__file__), 'libs/bench.py'))))
+                db_str = 'local+%s://%s' % (db, os.path.join(os.path.dirname(__file__), 'libs/bench.py'))
+                kwargs[db] = utils.Get(lambda db=db: connect_database(db_str))
+                kwargs['config'][db] = db_str
         else:
             if not os.path.exists(kwargs['data_path']):
                 os.mkdir(kwargs['data_path'])
-            kwargs[db] = utils.Get(lambda db=db: connect_database('sqlite+%s:///%s/%s.db' % (
-                db, kwargs['data_path'], db[:-2])))
+            db_str = 'sqlite+%s:///%s/%s.db' % (db, kwargs['data_path'], db[:-2])
+            kwargs[db] = utils.Get(lambda db=db: connect_database(db_str))
+            kwargs['config'][db] = db_str
             kwargs['is_%s_default' % db] = True
-
     # create folder for counter.dump
     if not os.path.exists(kwargs['data_path']):
         os.mkdir(kwargs['data_path'])
@@ -166,7 +167,6 @@ def cli(ctx, **kwargs):
         pass
     elif os.environ.get('PHANTOMJS_NAME'):
         kwargs['phantomjs_proxy'] = os.environ['PHANTOMJS_PORT_25555_TCP'][len('tcp://'):]
-
     ctx.obj = utils.ObjectDict(ctx.obj or {})
     ctx.obj['instances'] = []
     ctx.obj.update(kwargs)
@@ -200,7 +200,6 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
     """
     g = ctx.obj
     Scheduler = load_cls(None, None, scheduler_cls)
-
     kwargs = dict(taskdb=g.taskdb, projectdb=g.projectdb, projectcache=g.projectcache, resultdb=g.resultdb,
                   newtask_queue=g.newtask_queue, status_queue=g.status_queue,
                   out_queue=g.scheduler2fetcher, data_path=g.get('data_path', 'data'))
@@ -252,8 +251,9 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
     else:
         inqueue = g.scheduler2fetcher
         outqueue = g.fetcher2processor
+    print(ctx.obj['config'])
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
-                      poolsize=poolsize, proxy=proxy, async_mode=async_mode)
+                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'])
     fetcher.phantomjs_proxy = phantomjs_endpoint or g.phantomjs_proxy
     fetcher.splash_endpoint = splash_endpoint
     if user_agent:
@@ -458,7 +458,6 @@ def all(ctx, fetcher_num, processor_num, result_worker_num, run_in):
     """
     Run all the components in subprocess or thread
     """
-
     ctx.obj['debug'] = False
     g = ctx.obj
 

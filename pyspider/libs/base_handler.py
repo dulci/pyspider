@@ -60,7 +60,6 @@ def config(_config=None, **kwargs):
         return func
     return wrapper
 
-
 class NOTSET(object):
     pass
 
@@ -224,7 +223,7 @@ class BaseHandler(object):
     fetch_fields = ('method', 'headers', 'user_agent', 'data', 'connect_timeout', 'timeout', 'allow_redirects', 'cookies',
                     'proxy', 'etag', 'last_modifed', 'last_modified', 'save', 'js_run_at', 'js_script',
                     'js_viewport_width', 'js_viewport_height', 'load_images', 'fetch_type', 'use_gzip', 'validate_cert',
-                    'max_redirects', 'robots_txt')
+                    'max_redirects', 'robots_txt', 'css_selector', 'xpath_selector', 'is_final')
     process_fields = ('callback', 'process_time_limit')
 
     @staticmethod
@@ -399,7 +398,6 @@ class BaseHandler(object):
 
           full documents: http://pyspider.readthedocs.org/en/latest/apis/self.crawl/
         '''
-
         if isinstance(url, six.string_types) and url.startswith('curl '):
             curl_kwargs = curl_to_arguments(url)
             url = curl_kwargs.pop('urls')

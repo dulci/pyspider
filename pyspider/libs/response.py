@@ -22,7 +22,8 @@ from pyspider.libs import utils
 class Response(object):
 
     def __init__(self, status_code=None, url=None, orig_url=None, headers=CaseInsensitiveDict(),
-                 content='', cookies=None, error=None, traceback=None, save=None, js_script_result=None, time=0, page_num = -1):
+                 content='', cookies=None, error=None, traceback=None, save=None, js_script_result=None, time=0, 
+                 page_num = -1, project_name=None, configure={}):
         if cookies is None:
             cookies = {}
         self.status_code = status_code
@@ -37,6 +38,8 @@ class Response(object):
         self.js_script_result = js_script_result
         self.time = time
         self.page_num = page_num
+        self.project_name = project_name
+        self.configure = configure
 
     def __repr__(self):
         return u'<Response [%d]>' % self.status_code
@@ -97,6 +100,14 @@ class Response(object):
         """
         self._encoding = value
         self._text = None
+
+    @property
+    def project(self):
+        return self.project_name
+
+    @property
+    def config(self):
+        return self.configure
 
     @property
     def text(self):
@@ -234,7 +245,9 @@ def rebuild_response(r):
         time=r.get('time', 0),
         orig_url=r.get('orig_url', r.get('url', '')),
         js_script_result=r.get('js_script_result'),
-        save=r.get('save')
+        save=r.get('save'),
+        project_name=r.get('project_name'),
+        configure=r.get('configure')
     )
     return response
 
