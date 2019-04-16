@@ -36,7 +36,8 @@ class Mydriver(object):
         chrome_options.add_argument('blink-settings=imagesEnabled=true') #不加载图片, 提升速度
         prefs = { "profile.managed_default_content_settings.images": 2 }
         chrome_options.add_experimental_option("prefs", prefs)
-        # chrome_options.add_argument('--headless') #浏览器不提供可视化页面. linux下如果系统不支持可视化不加这条会启动失败
+        chrome_options.add_argument('--headless') #浏览器不提供可视化页面. linux下如果系统不支持可视化不加这条会启动失败
+        chrome_options.add_argument('--no-sandbox')
         chrome_options.binary_location = r"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" #手动指定使用的浏览器位置
         driver = webdriver.Chrome(chrome_options=chrome_options)
         driver.implicitly_wait(10)
