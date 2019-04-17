@@ -478,7 +478,6 @@ def get_db(db_str):
 
 def is_all_url_exists(db_str, project, url_list):
     db = get_db(db_str)
-    not_exists = list()
     all_exists = True
     for index in range(len(url_list)-1, -1, -1):
         if not db.get_task(project, md5string(url_list[index])):
