@@ -4,11 +4,15 @@
 # Author: Binux<i@binux.me>
 #         http://binux.me
 # Created on 2014-10-19 15:37:46
-
+import sys
+import os
+sys.path.append( os.path.join( os.path.abspath(os.path.dirname(__file__)) , '../'))
 import time
 import json
 import logging
+import datetime
 from six.moves import queue as Queue
+from pyspider.libs.utils import md5string
 logger = logging.getLogger("result")
 
 
@@ -19,19 +23,26 @@ class ResultWorker(object):
     override this if needed.
     """
 
-    def __init__(self, taskdb, resultdb, inqueue, projectcache=None):
+    def __init__(self, taskdb, resultdb, inqueue, content_queue, projectcache=None):
         self.taskdb = taskdb
         self.resultdb = resultdb
         self.projectcache = projectcache
         self.inqueue = inqueue
         self._quit = False
+        self.content_queue = content_queue
 
     def on_result(self, task, result):
         # repeat check
-        oldTask = self.resultdb.get(task['project'], task['taskid'])
-        if oldTask is not None:
-            logger.info('result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
-            return
+        if task['group'] is not None and task['group'] != 'self_crawler':
+            oldTask = self.resultdb.get(task['project'], task['taskid'])
+            if oldTask is not None:
+                logger.info('result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+                return
+        elif task['group'] is not None and task['group'] == 'self_crawler':
+            oldTask = self.resultdb.get_content(task['project'], task['taskid'])
+            if oldTask is not None:
+                logger.info('result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+                return
 
         # reset project delay level
         if self.projectcache is not None:
@@ -42,6 +53,21 @@ class ResultWorker(object):
         if 'taskid' in task and 'project' in task and 'url' in task:
             logger.info('result %s:%s %s -> %.30r' % (
                 task['project'], task['taskid'], task['url'], result))
+            if task["skip_fetcher"] == 0 and task['group'] == 'self_crawler':
+                result_content = dict()
+                result_content['ddid'] = md5string(result['html'])
+                result_content['type'] = task['project']
+                result_content['html'] = str(result['html'])
+                result_content['jhycontent'] = str(result['jhycontent'])
+                result_content['currentTime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                result_content['publishTime'] = result['publishTime']
+                result_content['link'] = task['url']
+                result_content['jhytitle'] = result['title']
+                result_content['taskName'] = result['taskName']
+                result_content['contentTitle'] = result['contentTitle']
+                result_content['crawlerTeamId'] = result['crawlerTeamId']
+                result_content_str = json.dumps(result_content)
+                self.content_queue.put(result_content_str)
             return self.resultdb.save(
                 project=task['project'],
                 taskid=task['taskid'],
