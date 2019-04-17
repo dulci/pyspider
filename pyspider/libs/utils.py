@@ -477,16 +477,21 @@ def get_db(db_str):
     return db_obj.db
 
 def is_all_url_exists(db_str, project, url_list):
-    print(url_list)
     db = get_db(db_str)
+    not_exists = list()
     all_exists = True
-    for url in url_list:
-        print(db.get_task(project, md5string(url)))
-        if not db.get_task(project, md5string(url)):
+    for index in range(len(url_list)-1, -1, -1):
+        if not db.get_task(project, md5string(url_list[index])):
             all_exists = False
             continue
-        url_list.remove(url)
-    print(url_list)     
+        url_list.pop(index)  
     return all_exists
+
+def is_need_to_paging(db_str, project, url_list, sequence=None):
+    all_exists = is_all_url_exists(db_str, project, url_list)
+    if sequence:
+        return True
+    return not all_exists
+    
     
     

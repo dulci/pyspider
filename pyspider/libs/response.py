@@ -23,7 +23,7 @@ class Response(object):
 
     def __init__(self, status_code=None, url=None, orig_url=None, headers=CaseInsensitiveDict(),
                  content='', cookies=None, error=None, traceback=None, save=None, js_script_result=None, time=0, 
-                 page_num = -1, project_name=None, configure={}):
+                 page_num = -1, project_name=None, configure={}, sequence=None):
         if cookies is None:
             cookies = {}
         self.status_code = status_code
@@ -40,6 +40,7 @@ class Response(object):
         self.page_num = page_num
         self.project_name = project_name
         self.configure = configure
+        self.sequence = sequence
 
     def __repr__(self):
         return u'<Response [%d]>' % self.status_code
@@ -108,6 +109,10 @@ class Response(object):
     @property
     def config(self):
         return self.configure
+
+    @property
+    def remainder(self):
+        return self.sequence
 
     @property
     def text(self):
@@ -247,7 +252,8 @@ def rebuild_response(r):
         js_script_result=r.get('js_script_result'),
         save=r.get('save'),
         project_name=r.get('project_name'),
-        configure=r.get('configure')
+        configure=r.get('configure'),
+        sequence=r.get('sequence')
     )
     return response
 

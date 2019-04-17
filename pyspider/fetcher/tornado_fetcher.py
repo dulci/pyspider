@@ -173,6 +173,8 @@ class Fetcher(object):
                 del result['error']
         callback(type, task, result)
         self.on_result(type, task, result)
+        if task.get('fetch', {}).get('sequence'):
+            result['sequence'] = int(task.get('fetch', {}).get('sequence')) - 1
         raise gen.Return(result)
 
     def sync_fetch(self, task):
