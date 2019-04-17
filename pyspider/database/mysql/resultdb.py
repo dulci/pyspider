@@ -58,22 +58,40 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         return data
 
     def save(self, project, taskid, url, result, group):
-        # 记录表保存
-        tablename = "crawler_result_record"
-        if project not in self.projects:
-            #self._create_project(project)
-            self._list_project()
-        # 默认存放站源完整性表中
-        group_name = str(group).strip()
-        obj = {
-            'project': project,
-            'taskid': taskid,
-            'group': group,
-            'url': url,
-            'result': result,
-            'updatetime': time.time(),
-        }
-        self._replace(tablename, **self._stringify(obj))
+        if group == 'self_crawler':
+            # 内容记录表保存
+            tablename = "crawler_content_result_record"
+            if project not in self.projects:
+                # self._create_project(project)
+                self._list_project()
+            # 默认存放站源完整性表中
+            group_name = str(group).strip()
+            obj = {
+                'project': project,
+                'taskid': taskid,
+                'group': group,
+                'url': url,
+                'result': result,
+                'updatetime': time.time(),
+            }
+            return self._replace(tablename, **self._stringify(obj))
+        else:
+            # 记录表保存
+            tablename = "crawler_result_record"
+            if project not in self.projects:
+                #self._create_project(project)
+                self._list_project()
+            # 默认存放站源完整性表中
+            group_name = str(group).strip()
+            obj = {
+                'project': project,
+                'taskid': taskid,
+                'group': group,
+                'url': url,
+                'result': result,
+                'updatetime': time.time(),
+            }
+            self._replace(tablename, **self._stringify(obj))
         if group_name == 'completion_delay_monitoring':
             # 及时性完整性监控表保存
             tablename = "completion_delay_monitoring_record"
@@ -150,6 +168,13 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
         # if project not in self.projects:
         #     return
         tablename = "crawler_result_record"
+        where = "`taskid` = %s and project = %s"
+        for task in self._select2dic(tablename, what=fields,
+                                     where=where, where_values=(taskid, project,)):
+            return self._parse(task)
+
+    def get_content(self, project, taskid, fields=None):
+        tablename = "crawler_content_result_record"
         where = "`taskid` = %s and project = %s"
         for task in self._select2dic(tablename, what=fields,
                                      where=where, where_values=(taskid, project,)):
