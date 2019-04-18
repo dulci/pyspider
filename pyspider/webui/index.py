@@ -200,8 +200,9 @@ def clean():
     taskdb = app.config['taskdb']
     resultdb = app.config['resultdb']
     project = request.form['project']
+    group = request.form['group']
     taskdb.clean(project)
-    resultdb.clean(project)
+    resultdb.clean(project, group)
     return json.dumps({"result": True}), 200, {'Content-Type': 'application/json'}
 
 @app.route('/robots.txt')
