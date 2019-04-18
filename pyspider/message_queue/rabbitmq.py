@@ -180,6 +180,7 @@ class PikaQueue(object):
                 self.channel.basic_ack(method_frame.delivery_tag)
         return umsgpack.unpackb(body)
 
+
     @catch_error
     def delete(self):
         with self.lock:

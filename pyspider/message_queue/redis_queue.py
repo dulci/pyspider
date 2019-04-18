@@ -86,6 +86,7 @@ class RedisQueue(object):
         ret = self.redis.lpop(self.name)
         if ret is None:
             raise self.Empty
+        # return ret
         return umsgpack.unpackb(ret)
 
     def get(self, block=True, timeout=None):
