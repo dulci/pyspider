@@ -37,10 +37,10 @@ class Response(object):
         self.save = save
         self.js_script_result = js_script_result
         self.time = time
-        self.page_num = page_num
+        self._page_num = page_num
         self.project_name = project_name
         self.configure = configure
-        self.sequence = sequence
+        self._sequence = sequence
 
     def __repr__(self):
         return u'<Response [%d]>' % self.status_code
@@ -53,8 +53,8 @@ class Response(object):
         """Returns true if `status_code` is 200 and no error."""
         return self.ok
 
-    def set_remainder(self, value):
-        self.sequence = value
+    def set_sequence(self, value):
+        self._sequence = value
     @property
     def ok(self):
         """Return true if `status_code` is 200 and no error."""
@@ -65,8 +65,8 @@ class Response(object):
         return True
 
     @property
-    def max_page(self):
-        return self.page_num
+    def page_num(self):
+        return self._page_num
 
     @property
     def encoding(self):
@@ -114,8 +114,8 @@ class Response(object):
         return self.configure
 
     @property
-    def remainder(self):
-        return self.sequence
+    def sequence(self):
+        return self._sequence
 
     @property
     def text(self):
