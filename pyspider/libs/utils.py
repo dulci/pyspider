@@ -486,8 +486,10 @@ def is_all_url_exists(db_str, project, url_list):
         url_list.pop(index)  
     return all_exists
 
-def is_need_to_paging(db_str, project, url_list, sequence=None):
+def is_need_to_paging(db_str, project, url_list, sequence=None, can_page_num=None):
     all_exists = is_all_url_exists(db_str, project, url_list)
+    if can_page_num is not None and int(can_page_num) == 0:
+        return False
     if sequence:
         return True
     return not all_exists

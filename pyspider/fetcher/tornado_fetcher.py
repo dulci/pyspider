@@ -175,6 +175,8 @@ class Fetcher(object):
         self.on_result(type, task, result)
         if task.get('fetch', {}).get('sequence'):
             result['sequence'] = int(task.get('fetch', {}).get('sequence')) - 1
+        if task.get('fetch', {}).get('page_num'):
+            result['page_num'] = int(task.get('fetch', {}).get('page_num')) - 1
         raise gen.Return(result)
 
     def sync_fetch(self, task):
