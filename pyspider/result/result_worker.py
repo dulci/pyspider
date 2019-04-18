@@ -53,6 +53,12 @@ class ResultWorker(object):
         if 'taskid' in task and 'project' in task and 'url' in task:
             logger.info('result %s:%s %s -> %.30r' % (
                 task['project'], task['taskid'], task['url'], result))
+            res = self.resultdb.save(
+                project=task['project'],
+                taskid=task['taskid'],
+                url=task['url'],
+                result=result,
+                group=task['group'])
             if task['group'] == 'self_crawler':
                 result_content = dict()
                 result_content['taskid'] = task['taskid']
@@ -69,13 +75,7 @@ class ResultWorker(object):
                 result_content['crawlerTeamId'] = result['crawlerTeamId']
                 result_content_str = json.dumps(result_content)
                 self.content_queue.put(result_content_str)
-            return self.resultdb.save(
-                project=task['project'],
-                taskid=task['taskid'],
-                url=task['url'],
-                result=result,
-                group=task['group']
-            )
+            return res
         else:
             logger.warning('result UNKNOW -> %.30r' % result)
             return
