@@ -53,7 +53,7 @@ class ResultWorker(object):
         if 'taskid' in task and 'project' in task and 'url' in task:
             logger.info('result %s:%s %s -> %.30r' % (
                 task['project'], task['taskid'], task['url'], result))
-            if task["skip_fetcher"] == 0 and task['group'] == 'self_crawler':
+            if task['group'] == 'self_crawler':
                 result_content = dict()
                 result_content['taskid'] = task['taskid']
                 result_content['ddid'] = md5string(result['html'])
