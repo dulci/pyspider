@@ -55,6 +55,7 @@ class ResultWorker(object):
                 task['project'], task['taskid'], task['url'], result))
             if task["skip_fetcher"] == 0 and task['group'] == 'self_crawler':
                 result_content = dict()
+                result_content['taskid'] = task['taskid']
                 result_content['ddid'] = md5string(result['html'])
                 result_content['type'] = task['project']
                 result_content['html'] = str(result['html'])
