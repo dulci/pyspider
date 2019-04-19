@@ -67,15 +67,14 @@ class Processor(object):
     RESULT_RESULT_LIMIT = 10
 
     def __init__(self, projectdb, inqueue, status_queue, newtask_queue, result_queue, content_queue,
-                 enable_stdout_capture=True,
-                 enable_projects_import=True,
-                 process_time_limit=PROCESS_TIME_LIMIT):
+                 enable_stdout_capture=True, enable_projects_import=True, process_time_limit=PROCESS_TIME_LIMIT, processdb=None):
         self.inqueue = inqueue
         self.status_queue = status_queue
         self.newtask_queue = newtask_queue
         self.result_queue = result_queue
         self.content_queue = content_queue
         self.projectdb = projectdb
+        self.processdb = processdb
         self.enable_stdout_capture = enable_stdout_capture
 
         self._quit = False

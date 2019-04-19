@@ -81,8 +81,10 @@ def connect_rpc(ctx, param, value):
               help='database url for projectdb, default: sqlite')
 @click.option('--resultdb', envvar='RESULTDB', callback=connect_db,
               help='database url for resultdb, default: sqlite')
-@click.option('--projectcache', envvar='PROJECTREDISDB', callback=connect_cache,
+@click.option('--projectcache', envvar='PROJECTCACHE', callback=connect_cache,
               help='redis url for projectdb cache, default: None')
+@click.option('--processdb', envvar='PROCESSDB', callback=connect_db,
+              help='database url for processdb, default: None')
 @click.option('--message-queue', envvar='AMQP_URL',
               help='connection url to message queue, '
               'default: builtin multiprocessing.Queue')
@@ -200,7 +202,7 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
     """
     g = ctx.obj
     Scheduler = load_cls(None, None, scheduler_cls)
-    kwargs = dict(taskdb=g.taskdb, projectdb=g.projectdb, projectcache=g.projectcache, resultdb=g.resultdb,
+    kwargs = dict(taskdb=g.taskdb, projectdb=g.projectdb, projectcache=g.projectcache, resultdb=g.resultdb, processdb=g.processdb,
                   newtask_queue=g.newtask_queue, status_queue=g.status_queue,
                   out_queue=g.scheduler2fetcher, data_path=g.get('data_path', 'data'))
     if threads:
@@ -253,7 +255,7 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
         outqueue = g.fetcher2processor
     print(ctx.obj['config'])
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
-                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'])
+                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=ctx.obj['processdb'])
     fetcher.phantomjs_proxy = phantomjs_endpoint or g.phantomjs_proxy
     fetcher.splash_endpoint = splash_endpoint
     if user_agent:
@@ -287,7 +289,7 @@ def processor(ctx, processor_cls, process_time_limit, enable_stdout_capture=True
                           inqueue=g.fetcher2processor, status_queue=g.status_queue,
                           newtask_queue=g.newtask_queue, result_queue=g.processor2result, content_queue=g.content_queue,
                           enable_stdout_capture=enable_stdout_capture,
-                          process_time_limit=process_time_limit)
+                          process_time_limit=process_time_limit, processdb=g.processdb)
 
     g.instances.append(processor)
     if g.get('testing_mode') or get_object:
@@ -307,7 +309,7 @@ def result_worker(ctx, result_cls, get_object=False):
     g = ctx.obj
     ResultWorker = load_cls(None, None, result_cls)
 
-    result_worker = ResultWorker(taskdb=g.taskdb, resultdb=g.resultdb, inqueue=g.processor2result, content_queue=g.content_queue, projectcache=g.projectcache)
+    result_worker = ResultWorker(taskdb=g.taskdb, resultdb=g.resultdb, inqueue=g.processor2result, content_queue=g.content_queue, projectcache=g.projectcache, processdb=g.processdb)
 
     g.instances.append(result_worker)
     if g.get('testing_mode') or get_object:
@@ -347,6 +349,7 @@ def webui(ctx, host, port, cdn, scheduler_rpc, fetcher_rpc, max_rate, max_burst,
     app.config['taskdb'] = g.taskdb
     app.config['projectdb'] = g.projectdb
     app.config['resultdb'] = g.resultdb
+    app.config['processdb'] = g.processdb
     app.config['cdn'] = cdn
 
     if max_rate:

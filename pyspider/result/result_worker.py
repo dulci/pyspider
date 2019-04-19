@@ -23,9 +23,10 @@ class ResultWorker(object):
     override this if needed.
     """
 
-    def __init__(self, taskdb, resultdb, inqueue, content_queue, projectcache=None):
+    def __init__(self, taskdb, resultdb, inqueue, content_queue, processdb=None, projectcache=None):
         self.taskdb = taskdb
         self.resultdb = resultdb
+        self.processdb = processdb
         self.projectcache = projectcache
         self.inqueue = inqueue
         self._quit = False

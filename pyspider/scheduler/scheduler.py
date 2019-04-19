@@ -168,11 +168,12 @@ class Scheduler(object):
     REQUEST_PACK = 3  # current not used
 
     def __init__(self, taskdb, projectdb, projectcache, newtask_queue, status_queue,
-                 out_queue, data_path='./data', resultdb=None):
+                 out_queue, data_path='./data', processdb=None, resultdb=None):
         self.taskdb = taskdb
         self.projectdb = projectdb
         self.projectcache = projectcache
         self.resultdb = resultdb
+        self.processdb = processdb
         self.newtask_queue = newtask_queue
         self.status_queue = status_queue
         self.out_queue = out_queue
@@ -319,6 +320,20 @@ class Scheduler(object):
 
     def insert_task(self, task):
         '''insert task into database'''
+        if self.processdb is not None:
+            group = None
+            project = self.projects.get(task['project'])
+            if project is not None:
+                group = project.group
+            else:
+                pro = self.projectdb.get(task['project'])
+                if pro is not None:
+                    group = pro['group']
+
+            fetch = None
+            if task.get('fetch') is not None:
+                fetch = task['fetch']
+            self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
         return self.taskdb.insert(task['project'], task['taskid'], task)
 
     def update_task(self, task):
@@ -342,7 +357,11 @@ class Scheduler(object):
         '''
         try:
             self.out_queue.put_nowait(task)
+            if self.processdb is not None:
+                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
         except Queue.Full:
+            if self.processdb is not None:
+                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=3)
             if force:
                 self._send_buffer.appendleft(task)
             else:

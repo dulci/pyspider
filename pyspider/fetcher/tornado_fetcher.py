@@ -90,7 +90,9 @@ class Fetcher(object):
     splash_lua_source = open(os.path.join(os.path.dirname(__file__), "splash_fetcher.lua")).read()
     robot_txt_age = 60*60  # 1h
 
-    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None):
+    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None, processdb=None):
+        self.processdb = processdb
+
         self.inqueue = inqueue
         self.outqueue = outqueue
 

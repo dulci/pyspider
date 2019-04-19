@@ -199,8 +199,11 @@ def runtask():
 def clean():
     taskdb = app.config['taskdb']
     resultdb = app.config['resultdb']
+    processdb = app.config['processdb']
     project = request.form['project']
     group = request.form['group']
+    if processdb is not None:
+        processdb.clean(project)
     taskdb.clean(project)
     resultdb.clean(project, group)
     return json.dumps({"result": True}), 200, {'Content-Type': 'application/json'}
