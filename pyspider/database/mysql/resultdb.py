@@ -139,14 +139,17 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             }
             return self._replace(tablename, **self._stringify(obj))
 
-    def select(self, project, fields=None, offset=0, limit=None):
-        time.sleep(0.1)
-        if project not in self.projects:
-            self._list_project()
-        if project not in self.projects:
-            return
+    def select(self, project, group, fields=None, offset=0, limit=None):
+        # 去掉project存在性校验
+        # if project not in self.projects:
+        #     self._list_project()
+        # if project not in self.projects:
+        #     return
         # tablename = self._tablename(project)
-        tablename = "crawler_result_record"
+        if group == 'self_crawler':
+            tablename = "crawler_content_result_record"
+        elif group == 'completion_delay_monitoring':
+            tablename = "crawler_result_record"
 
         for task in self._select2dic(tablename, where="project = %s", where_values=[project], what=fields, order='updatetime DESC',
                                      offset=offset, limit=limit):
