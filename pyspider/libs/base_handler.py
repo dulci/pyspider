@@ -175,7 +175,7 @@ class BaseHandler(object):
             response.raise_for_status()
         return self._run_func(function, response, task)
 
-    def run_task(self, module, task, response, processdb):
+    def run_task(self, module, task, response, processdb=None):
         """
         Processing the task, catching exceptions and logs, return a `ProcessorResult` object
         """
