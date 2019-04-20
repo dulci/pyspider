@@ -27,6 +27,7 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
                            Column('taskid', String(64), primary_key=True, nullable=False, index=True),
                            Column('project', String(64), primary_key=True, nullable=False, index=True),
                            Column('group', String(64)),
+                           Column('type', Integer),
                            Column('status', Integer),
                            Column('process', String(2048)),
                            Column('fetch', String(2048)),
@@ -91,16 +92,18 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
                 data[each] = utils.utf8(json.dumps(data[each]))
         return data
 
-    def select(self, project, group, taskid=None, url=None, status=None, fields=None, offset=0, limit=None):
+    def select(self, project, group, taskid=None, url=None, status=None, type=None, fields=None, offset=0, limit=None):
         self.table.name = self.__tablename__
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
-        whl_con = and_(self.table.c.project == project, self.table.c.group == group, self.table.c.taskid != 'on_start', self.table.c.taskid != 'on_finished')
+        whl_con = and_(self.table.c.project == project, self.table.c.group == group)
         if taskid is not None and taskid != '':
             whl_con = and_(whl_con, self.table.c.taskid == taskid)
         if url is not None and url != '':
             whl_con = and_(whl_con, self.table.c.url == url)
         if status is not None and status != '':
             whl_con = and_(whl_con, self.table.c.status == status)
+        if type is not None and type != 'all':
+            whl_con = and_(whl_con, self.table.c.type == type)
         for process in self.engine.execute(self.table.select()
                                         .with_only_columns(columns=columns)
                                         .where(whl_con)
@@ -117,6 +120,16 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
             obj['group'] = group
         obj['status'] = 1
         obj['process'] = process
+        if taskid == 'on_start':
+            obj['type'] = 1
+        elif taskid == 'on_finished':
+            obj['type'] = 4
+        elif str(process).find('detail_page') != -1:
+            obj['type'] = 3
+        elif str(process).find('index_page') != -1:
+            obj['type'] = 2
+        else:
+            obj['type'] = 3
         if fetch is not None:
             obj['fetch'] = fetch
         obj['url'] = url
@@ -163,15 +176,17 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
                                    .where(self.table.c.taskid == taskid)
                                    .values(**self._stringify(obj)))
 
-    def count(self, project, group, taskid=None, url=None, status=None):
+    def count(self, project, group, taskid=None, url=None, status=None, type=None):
         self.table.name = self.__tablename__
-        whl_con = and_(self.table.c.project == project, self.table.c.group == group, self.table.c.taskid != 'on_start', self.table.c.taskid != 'on_finished')
+        whl_con = and_(self.table.c.project == project, self.table.c.group == group)
         if taskid is not None and taskid != '':
             whl_con = and_(whl_con, self.table.c.taskid == taskid)
         if url is not None and url != '':
             whl_con = and_(whl_con, self.table.c.url == url)
         if status is not None and status != '':
             whl_con = and_(whl_con, self.table.c.status == status)
+        if type is not None and type != 'all':
+            whl_con = and_(whl_con, self.table.c.type == type)
         for count, in self.engine.execute(self.table.count()
                                                   .where(whl_con)):
             return count

@@ -36,6 +36,16 @@
                 <input name="url" style="width: 700px;" value="{{ url }}" />
               </span>
               <span>
+                type：
+                <select name="type" id="search_type">
+                  <option value="all">全部</option>
+                  <option value="1">开始</option>
+                  <option value="2">列表页</option>
+                  <option value="3">详情页</option>
+                  <option value="4">结束</option>
+                </select>
+              </span>
+              <span>
                 status：
                 <select name="status" id="search_status">
                   <option value="" selected="selected">全部</option>
@@ -86,7 +96,16 @@
         # for result in results
         <tr>
           <td>
-            <a class=url href="/task/{{ project }}:{{ result.taskid }}" target=_blank>{{ result.url }}</a>
+            <a class=url href="/task/{{ project }}:{{ result.taskid }}" target=_blank>{{ result.url }}</a><br/>
+            # if result.type == 1:
+              开始
+            # elif result.type == 2:
+              列表页
+            # elif result.type == 3:
+              详情页
+            # elif result.type == 4:
+              结束
+            # endif
           </td>
           <td>
             <a class=open-url href="{{ result.url }}" target="_blank"><span class="glyphicon glyphicon-new-window"></span></a>
@@ -202,6 +221,9 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
     <script type="application/javascript">
       if ('{{ status }}' != 'None') {
           $("#search_status").val('{{ status }}');
+      }
+      if ('{{ type }}' != 'None') {
+          $("#search_type").val('{{ type }}');
       }
       $("#btn_submit").click(function() {
           $("#offset").val(0);
