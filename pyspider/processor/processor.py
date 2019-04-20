@@ -117,7 +117,7 @@ class Processor(object):
                                       exception=project_data['exception'])
             else:
                 ret = project_data['instance'].run_task(
-                    project_data['module'], task, response)
+                    project_data['module'], task, response, self.processdb)
         except Exception as e:
             logstr = traceback.format_exc()
             ret = ProcessorResult(logs=(logstr, ), exception=e)
@@ -214,6 +214,8 @@ class Processor(object):
         while not self._quit:
             try:
                 task, response = self.inqueue.get(timeout=1)
+                if self.processdb is not None:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=21)
                 self.on_task(task, response)
                 self._exceptions = 0
             except Queue.Empty as e:

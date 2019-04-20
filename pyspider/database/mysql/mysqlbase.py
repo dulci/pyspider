@@ -25,6 +25,9 @@ class MySQLMixin(object):
             self.conn.database = self.database_name
             return self.conn.cursor()
 
+    def getConn(self):
+        return self.conn
+
 
 class SplitTableMixin(object):
     UPDATE_PROJECTS_TIME = 10 * 60

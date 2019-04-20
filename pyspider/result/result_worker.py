@@ -76,8 +76,12 @@ class ResultWorker(object):
                 result_content['crawlerTeamId'] = result['crawlerTeamId']
                 result_content_str = json.dumps(result_content)
                 self.content_queue.put(result_content_str)
+            if self.processdb is not None:
+                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=32)
             return res
         else:
+            if self.processdb is not None:
+                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=33)
             logger.warning('result UNKNOW -> %.30r' % result)
             return
 
@@ -91,6 +95,8 @@ class ResultWorker(object):
         while not self._quit:
             try:
                 task, result = self.inqueue.get(timeout=1)
+                if self.processdb is not None:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=31)
                 self.on_result(task, result)
             except Queue.Empty as e:
                 continue

@@ -13,12 +13,12 @@ import json
 import mysql.connector
 
 from pyspider.libs import utils
-from pyspider.database.base.taskdb import TaskDB as BaseTaskDB
+from pyspider.database.base.processdb import ProcessDB as BaseProcessDB
 from pyspider.database.basedb import BaseDB
 from .mysqlbase import MySQLMixin, SplitTableMixin
 
 
-class ProcessDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
+class ProcessDB(MySQLMixin, SplitTableMixin, BaseProcessDB, BaseDB):
     __tablename__ = ''
 
     def __init__(self, host='localhost', port=3306, database='processdb',
@@ -39,7 +39,7 @@ class ProcessDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
               `taskid` varchar(64) NOT NULL,
               `project` varchar(64) NOT NULL COMMENT '站源标识',
               `group` varchar(64) DEFAULT NULL COMMENT '分组',
-              `status` int(1) DEFAULT NULL COMMENT '任务状态 1：任务创建，2：任务已发到scheduler2fetcher队列成功，3：任务已发到scheduler2fetcher队列失败，11：fetcher开始处理，12：fetcher处理成功，任务已发送到fetcher2processor队列，13：fetcher处理失败，21：processor开始处理，22：processor处理成功，任务发送到processor2result队列，23：processor处理失败，31：result_worker开始处理，32：result_worker处理完成，33：result_worker处理失败',
+              `status` int(1) DEFAULT NULL COMMENT '任务状态 1：任务创建，2：任务已发到scheduler2fetcher队列成功，3：任务已发到scheduler2fetcher队列失败，11：fetcher开始处理，12：fetcher处理成功，任务已发送到fetcher2processor队列，13：fetcher获取失败，14：fetcher队列发送失败，21：processor开始处理，22：processor处理成功，任务发送到processor2result队列，23：processor处理失败，31：result_worker开始处理，32：result_worker处理完成，33：result_worker处理失败',
               `process` mediumblob DEFAULT NULL COMMENT 'process描述',
               `fetch` mediumblob DEFAULT NULL COMMENT 'fetch描述',
               `fetcher_response_code` int(11) DEFAULT NULL COMMENT 'fetcher返回值',
@@ -57,7 +57,8 @@ class ProcessDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
               PRIMARY KEY (`taskid`,`project`),
               KEY `IDX_TASKID` (`taskid`) USING BTREE,
               KEY `IDX_PROJECT` (`project`) USING BTREE,
-              KEY `IDX_URL` (`url`) USING BTREE
+              KEY `IDX_URL` (`url`) USING BTREE,
+              KEY `IDX_CREATED_AT` (`created_at`) USING BTREE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8''' % self.escape(tablename))
 
     def _parse(self, data):
@@ -110,12 +111,12 @@ class ProcessDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         if group is not None:
             obj['group'] = group
         obj['status'] = 1
-        obj['process'] = json.dumps(process)
+        obj['process'] = process
         if fetch is not None:
-            obj['fetch'] = json.dumps(fetch)
+            obj['fetch'] = fetch
         obj['url'] = url
         obj['scheduler_created_time'] = time.strftime('%Y-%m-%d %H:%M:%S')
-        return self._insert(tablename, **self._stringify(obj))
+        return self._replace(tablename, **self._stringify(obj))
 
     def update_status(self, project, taskid, status, fetcher_response_code=None, obj={}, **kwargs):
         tablename = 'processdb'
@@ -128,7 +129,7 @@ class ProcessDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
             obj['scheduler_to_fetcher_time'] = time.strftime('%Y-%m-%d %H:%M:%S')
         elif status == 11:
             obj['fetcher_begin_time'] = time.strftime('%Y-%m-%d %H:%M:%S')
-        elif status == 12 or status == 13:
+        elif status == 12 or status == 13 or status == 14:
             obj['fetcher_end_time'] = time.strftime('%Y-%m-%d %H:%M:%S')
         elif status == 21:
             obj['processor_begin_time'] = time.strftime('%Y-%m-%d %H:%M:%S')

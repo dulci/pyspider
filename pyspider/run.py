@@ -253,9 +253,8 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
     else:
         inqueue = g.scheduler2fetcher
         outqueue = g.fetcher2processor
-    print(ctx.obj['config'])
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
-                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=ctx.obj['processdb'])
+                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=g.processdb)
     fetcher.phantomjs_proxy = phantomjs_endpoint or g.phantomjs_proxy
     fetcher.splash_endpoint = splash_endpoint
     if user_agent:

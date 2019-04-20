@@ -226,6 +226,9 @@
               <a class="btn btn-default btn-xs" href="/results?project={{ project.name }}&group={{ project.group }}" target=_blank>Results</a>
               {% endraw %}
               {% raw %}
+              <a class="btn btn-default btn-xs" href="/process?project={{ project.name }}&group={{ project.group }}" target=_blank>Processes</a>
+              {% endraw %}
+              {% raw %}
               <a class="btn btn-default btn-xs" @click="project_clean(project, $event)">Clean</a>
               {% endraw %}
               # endif

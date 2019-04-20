@@ -175,7 +175,7 @@ class BaseHandler(object):
             response.raise_for_status()
         return self._run_func(function, response, task)
 
-    def run_task(self, module, task, response):
+    def run_task(self, module, task, response, processdb):
         """
         Processing the task, catching exceptions and logs, return a `ProcessorResult` object
         """
@@ -199,9 +199,13 @@ class BaseHandler(object):
                     self._run_func(self.on_result, r, response, task)
             else:
                 self._run_func(self.on_result, result, response, task)
+            if processdb is not None:
+                processdb.update_status(project=task['project'], taskid=task['taskid'], status=22)
         except Exception as e:
             logger.exception(e)
             exception = e
+            if self.processdb is not None:
+                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=23)
         finally:
             follows = self._follows
             messages = self._messages

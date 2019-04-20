@@ -164,7 +164,7 @@ def _connect_mongodb(parsed,dbtype,url):
         raise LookupError
 
 
-def _connect_sqlalchemy(parsed, dbtype,url, other_scheme):
+def _connect_sqlalchemy(parsed, dbtype, url, other_scheme):
     if not other_scheme:
         raise Exception('wrong scheme format: %s' % parsed.scheme)
     url = url.replace(parsed.scheme, other_scheme)
@@ -177,6 +177,9 @@ def _connect_sqlalchemy(parsed, dbtype,url, other_scheme):
     elif dbtype == 'resultdb':
         from .sqlalchemy.resultdb import ResultDB
         return ResultDB(url)
+    elif dbtype == 'processdb':
+        from .sqlalchemy.processdb import ProcessDB
+        return ProcessDB(url)
     else:
         raise LookupError
 

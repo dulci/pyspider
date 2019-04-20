@@ -155,14 +155,12 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
                                      offset=offset, limit=limit):
             yield self._parse(task)
 
-    def count(self, project):
-        time.sleep(0.1)
-        if project not in self.projects:
-            self._list_project()
-        if project not in self.projects:
-            return 0
-        tablename = self._tablename(project)
-        for count, in self._execute("SELECT count(1) FROM %s" % self.escape(tablename)):
+    def count(self, project, group):
+        if group == 'self_crawler':
+            tablename = "crawler_content_result_record"
+        elif group == 'completion_delay_monitoring':
+            tablename = "crawler_result_record"
+        for count, in self._execute("SELECT count(1) FROM %s WHERE `group` = '%s' and `project` = '%s'" % (self.escape(tablename), group, project)):
             return count
 
     def get(self, project, taskid, fields=None):

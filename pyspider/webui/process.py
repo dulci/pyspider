@@ -10,29 +10,33 @@ from __future__ import unicode_literals
 from flask import render_template, request, json
 from flask import Response
 from .app import app
-from pyspider.libs import result_dump
+from pyspider.libs import process_dump
 
 
-@app.route('/results')
-def result():
-    resultdb = app.config['resultdb']
+@app.route('/process')
+def process():
+    processdb = app.config['processdb']
     project = request.args.get('project')
     group = request.args.get('group')
+    taskid = request.args.get('taskid')
+    url = request.args.get('url')
     offset = int(request.args.get('offset', 0))
     limit = int(request.args.get('limit', 20))
 
-    count = resultdb.count(project, group)
-    results = list(resultdb.select(project, group, offset=offset, limit=limit))
+    count = processdb.count(project, group, taskid=taskid, url=url)
+    results = list(processdb.select(project, group, taskid=taskid, url=url, offset=offset, limit=limit))
+    common_fields = ('status', 'fetch', 'process', 'scheduler', 'fetcher', 'processor','result_worker')
 
     return render_template(
-        "result.html", count=count, results=results, group=group,
-        result_formater=result_dump.result_formater,
-        project=project, offset=offset, limit=limit, json=json
+        "process.html", count=count, results=results, group=group,
+        project=project, offset=offset, limit=limit, json=json,
+        common_fields=common_fields, taskid='' if taskid is None else taskid,
+        url='' if url is None else url
     )
 
 
-@app.route('/results/dump/<project>-<group>.<_format>')
-def dump_result(project, group,  _format):
+@app.route('/processes/dump/<project>-<group>.<_format>')
+def dump_processes(project, group, _format):
     resultdb = app.config['resultdb']
 
     offset = int(request.args.get('offset', 0)) or None
@@ -41,11 +45,11 @@ def dump_result(project, group,  _format):
 
     if _format == 'json':
         valid = request.args.get('style', 'rows') == 'full'
-        return Response(result_dump.dump_as_json(results, valid),
+        return Response(process_dump.dump_as_json(results, valid),
                         mimetype='application/json')
     elif _format == 'txt':
-        return Response(result_dump.dump_as_txt(results),
+        return Response(process_dump.dump_as_txt(results),
                         mimetype='text/plain')
     elif _format == 'csv':
-        return Response(result_dump.dump_as_csv(results),
+        return Response(process_dump.dump_as_csv(results),
                         mimetype='text/csv')

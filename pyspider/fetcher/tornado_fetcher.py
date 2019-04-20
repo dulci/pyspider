@@ -91,10 +91,10 @@ class Fetcher(object):
     robot_txt_age = 60*60  # 1h
 
     def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None, processdb=None):
-        self.processdb = processdb
-
         self.inqueue = inqueue
         self.outqueue = outqueue
+
+        self.processdb = processdb
 
         self.poolsize = poolsize
         self._running = False
@@ -126,8 +126,12 @@ class Fetcher(object):
         if self.outqueue:
             try:
                 self.outqueue.put((task, result))
+                if self.processdb is not None:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], fetcher_response_code=result['status_code'], status=12)
             except Exception as e:
                 logger.exception(e)
+                if self.processdb is not None:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], fetcher_response_code=result['status_code'], status=14)
 
     def fetch(self, task, callback=None):
         if self.async_mode:
@@ -168,6 +172,8 @@ class Fetcher(object):
                 result = yield self.http_fetch(url, task)
         except Exception as e:
             logger.exception(e)
+            if self.processdb is not None:
+                self.processdb.update_status(project=task['project'], taskid=task['taskid'], fetcher_response_code=result['status_code'], status=13)
             result = self.handle_error(type, url, task, start_time, e)
         if result['status_code'] == 521:
             result['status_code'] = 200
@@ -845,6 +851,8 @@ class Fetcher(object):
                     # FIXME: decode unicode_obj should used after data selete from
                     # database, it's used here for performance
                     task = utils.decode_unicode_obj(task)
+                    if self.processdb is not None:
+                        self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=11)
                     self.fetch(task)
                 except queue.Empty:
                     break
