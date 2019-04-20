@@ -91,7 +91,7 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
                 data[each] = utils.utf8(json.dumps(data[each]))
         return data
 
-    def select(self, project, group, taskid=None, url=None, fields=None, offset=0, limit=None):
+    def select(self, project, group, taskid=None, url=None, status=None, fields=None, offset=0, limit=None):
         self.table.name = self.__tablename__
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
         whl_con = and_(self.table.c.project == project, self.table.c.group == group, self.table.c.taskid != 'on_start', self.table.c.taskid != 'on_finished')
@@ -99,6 +99,8 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
             whl_con = and_(whl_con, self.table.c.taskid == taskid)
         if url is not None and url != '':
             whl_con = and_(whl_con, self.table.c.url == url)
+        if status is not None and status != '':
+            whl_con = and_(whl_con, self.table.c.status == status)
         for process in self.engine.execute(self.table.select()
                                         .with_only_columns(columns=columns)
                                         .where(whl_con)
@@ -161,13 +163,15 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
                                    .where(self.table.c.taskid == taskid)
                                    .values(**self._stringify(obj)))
 
-    def count(self, project, group, taskid=None, url=None):
+    def count(self, project, group, taskid=None, url=None, status=None):
         self.table.name = self.__tablename__
         whl_con = and_(self.table.c.project == project, self.table.c.group == group, self.table.c.taskid != 'on_start', self.table.c.taskid != 'on_finished')
         if taskid is not None and taskid != '':
             whl_con = and_(whl_con, self.table.c.taskid == taskid)
         if url is not None and url != '':
             whl_con = and_(whl_con, self.table.c.url == url)
+        if status is not None and status != '':
+            whl_con = and_(whl_con, self.table.c.status == status)
         for count, in self.engine.execute(self.table.count()
                                                   .where(whl_con)):
             return count

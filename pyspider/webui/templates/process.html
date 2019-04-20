@@ -23,6 +23,10 @@
           <form method="get" action="/process">
               <input type="hidden" name="group" value="{{ group }}" />
               <input type="hidden" name="project" value="{{ project }}" />
+              <input type="hidden" name="offset" value="{{ offset }}" id="offset" />
+              <input type="hidden" name="limit" value="{{ limit }}" id="limit" />
+              <input type="hidden" name="current_page" value="{{ int(offset/limit) + (1 if offset % limit else 0) }}" id="current_page" />
+              <input type="hidden" name="total_page" value="{{ int(count/limit) + (1 if count % limit else 0) }}" id="total_page" />
               <span>
                 taskid：
                 <input name="taskid" style="width: 300px;" value="{{ taskid }}" />
@@ -32,7 +36,27 @@
                 <input name="url" style="width: 700px;" value="{{ url }}" />
               </span>
               <span>
-                <button id="submit" type="submit" class="project-create btn btn-default btn-primary">Search</button>
+                status：
+                <select name="status" id="search_status">
+                  <option value="" selected="selected">全部</option>
+                  <option value="1">任务创建</option>
+                  <option value="2">任务已发到scheduler2fetcher队列成功</option>
+                  <option value="3">任务已发到scheduler2fetcher队列失败</option>
+                  <option value="11">fetcher开始处理</option>
+                  <option value="12">fetcher处理成功</option>
+                  <option value="13">fetcher获取失败</option>
+                  <option value="14">fetcher队列发送失败</option>
+                  <option value="21">processor开始处理</option>
+                  <option value="22">processor处理成功，任务发送到processor2result队列</option>
+                  <option value="23">processor处理失败</option>
+                  <option value="31">result_worker开始处理</option>
+                  <option value="32">result_worker处理完成</option>
+                  <option value="33">result_worker处理失败</option>
+                </select>
+              </span>
+              <span>
+                <button id="submit" type="submit" style="display: none" class="project-create btn btn-default btn-primary">Search</button>
+                <button id="btn_submit" type="button" class="project-create btn btn-default btn-primary">Search</button>
               </span>
           </form>
       </div><br/>
@@ -51,7 +75,7 @@
       <thead>
         <th style="width: 200px;">url</th>
         <th></th>
-        <th style="width: 400px;">info</th>
+        <th style="width: 260px;">info</th>
         # for field in common_fields
         <th>
           {{ field }}
@@ -156,24 +180,60 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
         # set current_page = int(offset/limit) + (1 if offset%limit else 0)
         # set count = count if count is not none else 0
         # set total_page = int(count/limit) + (1 if count%limit else 0)
-        <li class="{{ "disabled" if current_page - 1 <= 0 else "" }}">
-          <a href="{% if current_page>1 %}/processes?project={{ project }}&group={{ group }}&offset={{ (current_page-1)*limit }}&limit={{ limit }}{% endif %}">&laquo;</a>
+        <li class="{{ "disabled" if current_page - 1 < 0 else "" }}">
+          <a href="javascript: void(0);" onclick="prev_page()">&laquo;</a>
         </li>
         # set prev = 0
         # for i in range(0, total_page):
         # if abs(i-0) < 2 or abs(i-total_page) < 3 or -2 < i-current_page < 5:
           # set prev = i
           <li class="{% if i == current_page %}active{% endif %}">
-            <a href="/processes?project={{ project }}&offset={{ i*limit }}&group={{ group }}&limit={{ limit }}">{{ i + 1 }}</a>
+            <a href="javascript: void(0);" onclick="point_page({{ i + 1 }})">{{ i + 1 }}</a>
           </li>
         # elif prev == i-1:
         <li class="disabled"><a>…</a></li>
         # endif
         # endfor
         <li class="{{ "disabled" if current_page + 1 >= total_page else "" }}">
-          <a href="{% if current_page + 1<total_page %}/processes?project={{ project }}&group={{ group }}&offset={{ (current_page + 1)*limit }}&limit={{ limit }}{% endif %}">&raquo;</a>
+          <a href="javascript: void(0);" onclick="next_page()">&raquo;</a>
         </li>
       </ul>
     </div>
+    <script type="application/javascript">
+      if ('{{ status }}' != 'None') {
+          $("#search_status").val('{{ status }}');
+      }
+      $("#btn_submit").click(function() {
+          $("#offset").val(0);
+          $("#submit").trigger('click');
+      })
+      function point_page(page) {
+          var page = parseInt(page);
+          var limit = parseInt($("#limit").val());
+          $("#offset").val((page - 1) * limit);
+          $("#submit").trigger('click');
+      }
+      function next_page() {
+          var current_page = parseInt($("#current_page").val());
+          var total_page = parseInt($("#total_page").val());
+          var limit = parseInt($("#limit").val());
+          if ((current_page + 1) < total_page) {
+              $("#offset").val((current_page + 1) * limit);
+          } else {
+              return;
+          }
+          $("#submit").trigger('click');
+      }
+      function prev_page() {
+          var limit = parseInt($("#limit").val());
+          var current_page = parseInt($("#current_page").val());
+          if (current_page != 0) {
+              $("#offset").val((current_page - 1) * limit);
+          } else {
+              return;
+          }
+          $("#submit").trigger('click');
+      }
+    </script>
   </body>
 </html>

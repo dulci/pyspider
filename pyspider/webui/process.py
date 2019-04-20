@@ -20,18 +20,19 @@ def process():
     group = request.args.get('group')
     taskid = request.args.get('taskid')
     url = request.args.get('url')
+    status = request.args.get('status')
     offset = int(request.args.get('offset', 0))
     limit = int(request.args.get('limit', 20))
 
-    count = processdb.count(project, group, taskid=taskid, url=url)
-    results = list(processdb.select(project, group, taskid=taskid, url=url, offset=offset, limit=limit))
+    count = processdb.count(project, group, taskid=taskid, url=url, status=status)
+    results = list(processdb.select(project, group, taskid=taskid, url=url, status=status, offset=offset, limit=limit))
     common_fields = ('status', 'fetch', 'process', 'scheduler', 'fetcher', 'processor','result_worker')
 
     return render_template(
         "process.html", count=count, results=results, group=group,
         project=project, offset=offset, limit=limit, json=json,
         common_fields=common_fields, taskid='' if taskid is None else taskid,
-        url='' if url is None else url
+        url='' if url is None else url, status='' if status is None else status
     )
 
 
