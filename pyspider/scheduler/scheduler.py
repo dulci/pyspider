@@ -307,15 +307,15 @@ class Scheduler(object):
             if each not in task or not task[each]:
                 logger.error('%s not in task: %.200r', each, task)
                 return False
-        if task['project'] not in self.projects:
-            logger.error('unknown project: %s', task['project'])
-            return False
+        # if task['project'] not in self.projects:
+        #     logger.error('unknown project: %s', task['project'])
+        #     return False
 
-        project = self.projects[task['project']]
-        if not project.active:
-            logger.error('project %s not started, please set status to RUNNING or DEBUG',
-                         task['project'])
-            return False
+        # project = self.projects[task['project']]
+        # if not project.active:
+        #     logger.error('project %s not started, please set status to RUNNING or DEBUG',
+        #                  task['project'])
+        #     return False
         return True
 
     def insert_task(self, task):
