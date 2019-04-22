@@ -167,6 +167,7 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
               # endif
           </td>
           <td>
+              返回值：{{ result.fetcher_response_code }}<br/>
               # if result['fetcher_begin_time'] != None:
                   begin: {{ result['fetcher_begin_time'] }}<br/>
               # endif

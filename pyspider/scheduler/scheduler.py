@@ -150,7 +150,7 @@ class Scheduler(object):
     LOOP_INTERVAL = 0.1
     ACTIVE_TASKS = 100
     INQUEUE_LIMIT = 0
-    EXCEPTION_LIMIT = 3
+    EXCEPTION_LIMIT = 200
     DELETE_TIME = 24 * 60 * 60
     DEFAULT_RETRY_DELAY = {
         0: 30,
@@ -422,14 +422,14 @@ class Scheduler(object):
                 if not self.task_verify(task):
                     continue
 
-                if task['taskid'] in self.projects[task['project']].task_queue:
-                    if not task.get('schedule', {}).get('force_update', False):
-                        logger.debug('ignore newtask %(project)s:%(taskid)s %(url)s', task)
-                        continue
-
-                if task['taskid'] in tasks:
-                    if not task.get('schedule', {}).get('force_update', False):
-                        continue
+                # if task['taskid'] in self.projects[task['project']].task_queue:
+                #     if not task.get('schedule', {}).get('force_update', False):
+                #         logger.debug('ignore newtask %(project)s:%(taskid)s %(url)s', task)
+                #         continue
+                #
+                # if task['taskid'] in tasks:
+                #     if not task.get('schedule', {}).get('force_update', False):
+                #         continue
 
                 tasks[task['taskid']] = task
 
