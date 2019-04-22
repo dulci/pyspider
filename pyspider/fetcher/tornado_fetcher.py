@@ -172,9 +172,9 @@ class Fetcher(object):
                 result = yield self.http_fetch(url, task)
         except Exception as e:
             logger.exception(e)
+            result = self.handle_error(type, url, task, start_time, e)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], fetcher_response_code=result['status_code'], status=13)
-            result = self.handle_error(type, url, task, start_time, e)
         if result['status_code'] == 521:
             result['status_code'] = 200
             if 'error' in result:
