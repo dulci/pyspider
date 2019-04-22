@@ -13,7 +13,9 @@ import socket
 import base64
 import warnings
 import threading
+from lxml.html import HtmlElement
 from pyquery import PyQuery
+
 from pyspider.database import connect_database
 import re
 
@@ -443,17 +445,9 @@ def check_port_open(port, addr='127.0.0.1'):
         return False
 
 def get_xpath(node):
-    # parents = node.parents()
-#     parents.reverse()
-#     parent = parents[0]
-#     tag = get_tag_name(node)
-#     num = 1
-#     for e in node.parent().children():
-#         if node.text().strip() == e.text.strip():
-#             break
-#         num += 1
-#     return '//%s/%s[%s]'%(parent.getroottree().getelementpath(parent), tag, num)
-    return '//%s'%(node[0].getroottree().getelementpath(node[0]))
+    assert isinstance(node, HtmlElement) or isinstance(node, PyQuery), 'type is error'
+    node = node if isinstance(node, HtmlElement) else node[0]
+    return '//%s'%(node.getroottree().getelementpath(node))
             
 def get_tag_name(node):
     return re.search('<[a-zA-Z][\s\>]', node.outerHtml()).group()[1:-1].lower()
