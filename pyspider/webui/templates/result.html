@@ -35,6 +35,7 @@
       <thead>
         <th>url</th>
         <th></th>
+        <th>upload_status</th>
         # for field in common_fields|sort
         <th>
           {{ field }}
@@ -52,6 +53,9 @@
           </td>
           <td>
             <a class=open-url href="{{ result.url }}" target="_blank"><span class="glyphicon glyphicon-new-window"></span></a>
+          </td>
+          <td>
+            {{ result.upload_status }}
           </td>
           # for field in common_fields|sort
           <td>{{ json.dumps(result.result_formated[field], ensure_ascii=False) | truncate(100, True) }}</td>
