@@ -150,7 +150,7 @@ class Scheduler(object):
     LOOP_INTERVAL = 0.1
     ACTIVE_TASKS = 100
     INQUEUE_LIMIT = 0
-    EXCEPTION_LIMIT = 3
+    EXCEPTION_LIMIT = 200
     DELETE_TIME = 24 * 60 * 60
     DEFAULT_RETRY_DELAY = {
         0: 30,
