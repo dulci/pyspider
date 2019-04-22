@@ -204,8 +204,8 @@ class BaseHandler(object):
         except Exception as e:
             logger.exception(e)
             exception = e
-            if self.processdb is not None:
-                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=23)
+            if processdb is not None:
+                processdb.update_status(project=task['project'], taskid=task['taskid'], status=23)
         finally:
             follows = self._follows
             messages = self._messages
