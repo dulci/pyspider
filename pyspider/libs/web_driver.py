@@ -28,17 +28,18 @@ class Mydriver(object):
         return driver
 
     @classmethod
-    def chrome_driver(self):
+    def chrome_driver(self, load_img=False):
         chrome_options = Options()
         chrome_options.add_argument('window-size=1920x3000') #指定浏览器分辨率
         chrome_options.add_argument('--disable-gpu') #谷歌文档提到需要加上这个属性来规避bug
         chrome_options.add_argument('--hide-scrollbars') #隐藏滚动条, 应对一些特殊页面
-        chrome_options.add_argument('blink-settings=imagesEnabled=true') #不加载图片, 提升速度
-        prefs = { "profile.managed_default_content_settings.images": 2 }
-        chrome_options.add_experimental_option("prefs", prefs)
+        if load_img != True:
+            prefs = { "profile.managed_default_content_settings.images": 2 }
+            chrome_options.add_experimental_option("prefs", prefs)
         chrome_options.add_argument('--headless') #浏览器不提供可视化页面. linux下如果系统不支持可视化不加这条会启动失败
         chrome_options.add_argument('--no-sandbox')
-        chrome_options.binary_location = r"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" #手动指定使用的浏览器位置
+        #chrome_options.binary_location = r"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" #手动指定使用的浏览器位置
+        chrome_options.binary_location = r"/opt/google/chrome/google-chrome"
         driver = webdriver.Chrome(chrome_options=chrome_options)
         driver.implicitly_wait(10)
         return driver

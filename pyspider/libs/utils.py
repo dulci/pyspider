@@ -446,7 +446,7 @@ def check_port_open(port, addr='127.0.0.1'):
 
 def get_xpath(node):
     assert isinstance(node, HtmlElement) or isinstance(node, PyQuery), 'type is error'
-    node = node if isinstance(node, HtmlElement) else node[0]
+    node = node[0] if isinstance(node, PyQuery) else node
     return '//%s'%(node.getroottree().getelementpath(node))
             
 def get_tag_name(node):
