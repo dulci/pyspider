@@ -45,7 +45,6 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
         return self._insert(**obj)
 
     def update(self, name, obj={}, **kwargs):
-        time.sleep(0.1)
         obj = dict(obj)
         obj.update(kwargs)
         obj['updatetime'] = time.time()
@@ -53,7 +52,6 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
         return ret.rowcount
 
     def get_all(self, fields=None, search_condition=None):
-        time.sleep(0.1)
         where = None
         where_values = []
         page = 1
@@ -81,7 +79,6 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
 
 
     def count(self, search_condition=None):
-        time.sleep(0.1)
         where = None
         for condition in search_condition:
             if not where:
@@ -94,14 +91,12 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
             return count
 
     def get(self, name, fields=None):
-        time.sleep(0.1)
         where = "`name` = %s" % self.placeholder
         for each in self._select2dic(what=fields, where=where, where_values=(name, )):
             return each
         return None
 
     def drop(self, name):
-        time.sleep(0.1)
         where = "`name` = %s" % self.placeholder
         return self._delete(where=where, where_values=(name, ))
 

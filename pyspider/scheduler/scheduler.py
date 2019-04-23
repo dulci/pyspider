@@ -1302,7 +1302,6 @@ class ThreadBaseScheduler(Scheduler):
         while True:
             method, args, kwargs = queue.get()
             try:
-                time.sleep(0.1)
                 method(*args, **kwargs)
             except Exception as e:
                 logger.exception(e)
