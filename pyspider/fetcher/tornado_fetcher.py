@@ -550,13 +550,11 @@ class Fetcher(object):
                 driver = self.drivers.get_driver(task.get('project'), True)
                 driver.get(url)
                 origin_url = driver.current_url
-                content = bytes(driver.page_source, encoding = "utf8")
+                content = driver.page_source if task.get('fetch', {}).get('encoder') == False else bytes(driver.page_source, encoding = "utf8")
                 url = origin_url
             elif task.get('fetch', {}).get('css_selector') or task.get('fetch', {}).get('xpath_selector'):
                 assert self.drivers.get_driver(task.get('project')), 'no webdriver'
                 driver = self.drivers.get_driver(task.get('project'))
-                # last_height = driver.execute_script("return document.body.scrollHeight")
-#                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                 origin_url = driver.current_url
                 source_handle = driver.current_window_handle
                 if task.get('fetch', {}).get('css_selector'):
@@ -564,18 +562,15 @@ class Fetcher(object):
                     element = driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector'))
                     driver.execute_script("arguments[0].scrollIntoView()", element)
                     ActionChains(driver).move_to_element(element).click().perform()
-                    # driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector')).click()
                     driver.switch_to_window(driver.window_handles[-1])
                 if task.get('fetch', {}).get('xpath_selector'):
                     WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('xpath_selector'))))
                     element = driver.find_element_by_xpath(task.get('fetch', {}).get('xpath_selector'))
                     driver.execute_script("arguments[0].scrollIntoView()", element)
                     ActionChains(driver).move_to_element(element).click().perform()
-                    # driver.find_element_by_xpath(task.get('fetch', {}).get('xpath_selector')).click()
-                    # time.sleep(1)
                     driver.switch_to_window(driver.window_handles[-1])
                 window_handle = driver.current_window_handle
-                content = bytes(driver.page_source, encoding = "utf8")
+                content = driver.page_source if task.get('fetch', {}).get('encoder') == False else bytes(driver.page_source, encoding = "utf8")
                 url = driver.current_url
                 if task.get('fetch', {}).get('is_final'):
                     if window_handle == source_handle:

@@ -6,9 +6,9 @@ class WebDrivers(metaclass=Singleton):
     def __init__(self):
         self.drivers = {}
     
-    def get_driver(self, project, can_new=False):
+    def get_driver(self, project, can_new=False, load_img=False):
         if can_new and not self.drivers.get(project):
-            self.drivers[project] = Mydriver.chrome_driver()
+            self.drivers[project] = Mydriver.chrome_driver(load_img)
             return self.drivers.get(project)
         return self.drivers.get(project)
     
