@@ -432,8 +432,6 @@ class Fetcher(object):
 
     @gen.coroutine
     def http_fetch(self, url, task):
-        print('+++++++++++++++++')
-        print(url)
         '''HTTP fetcher'''
         start_time = time.time()
         self.on_fetch('http', task)
