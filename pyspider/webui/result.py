@@ -18,16 +18,21 @@ def result():
     resultdb = app.config['resultdb']
     project = request.args.get('project')
     group = request.args.get('group')
+    taskid = request.args.get('taskid')
+    url = request.args.get('url')
+    upload_status = request.args.get('upload_status')
     offset = int(request.args.get('offset', 0))
     limit = int(request.args.get('limit', 20))
 
-    count = resultdb.count(project, group)
-    results = list(resultdb.select(project, group, offset=offset, limit=limit))
+    count = resultdb.count(project, group, taskid=taskid, url=url, upload_status=upload_status)
+
+    results = list(resultdb.select(project, group, taskid=taskid, url=url, upload_status=upload_status, offset=offset, limit=limit))
 
     return render_template(
         "result.html", count=count, results=results, group=group,
         result_formater=result_dump.result_formater,
-        project=project, offset=offset, limit=limit, json=json
+        project=project, offset=offset, limit=limit, json=json, taskid='' if taskid is None else taskid,
+        url='' if url is None else url, upload_status='' if upload_status is None else upload_status
     )
 
 

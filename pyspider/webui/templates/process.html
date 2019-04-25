@@ -49,11 +49,12 @@
                 status：
                 <select name="status" id="search_status">
                   <option value="" selected="selected">全部</option>
+                  <option value="1,2,3,11,12,13,14,21,22,23,31,33">快速筛选抓取失败任务</option>
                   <option value="1">任务创建</option>
                   <option value="2">任务已发到scheduler2fetcher队列成功</option>
                   <option value="3">任务已发到scheduler2fetcher队列失败</option>
                   <option value="11">fetcher开始处理</option>
-                  <option value="12">fetcher处理成功</option>
+                  <option value="12">fetcher处理成功，任务发送到fetcher2processor队列</option>
                   <option value="13">fetcher获取失败</option>
                   <option value="14">fetcher队列发送失败</option>
                   <option value="21">processor开始处理</option>
@@ -67,6 +68,10 @@
               <span>
                 <button id="submit" type="submit" style="display: none" class="project-create btn btn-default btn-primary">Search</button>
                 <button id="btn_submit" type="button" class="project-create btn btn-default btn-primary">Search</button>
+              </span>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <span>
+                <a class="btn btn-default btn-xs" href="/results?project={{ project }}&group={{ group }}" target=_blank>Results</a>
               </span>
           </form>
       </div><br/>
@@ -91,6 +96,7 @@
           {{ field }}
         </th>
         # endfor
+        <th>jump_results</th>
       </thead>
       <tbody>
         # for result in results
@@ -190,6 +196,9 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
               # if result['result_worder_end_time'] != None:
                   end: {{ result['result_worder_end_time'] }}<br/>
               # endif
+          </td>
+          <td>
+            <a href="/results?project={{ project }}&group={{ group }}&taskid={{ result.taskid }}" target=_blank>Results</a>
           </td>
         # endfor
       </tbody>

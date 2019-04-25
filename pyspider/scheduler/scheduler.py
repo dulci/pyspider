@@ -216,8 +216,8 @@ class Scheduler(object):
         for project in self.projectdb.check_update(self._last_update_project):
             self._update_project(project)
             logger.debug("project: %s updated.", project['name'])
-            if self.projectcache:
-                self.projectcache.set_project_delay_level(project['name'], 0)
+            # if self.projectcache:
+            #     self.projectcache.set_project_delay_level(project['name'], 0)
         self._force_update_project = False
         self._last_update_project = now
 
@@ -892,7 +892,7 @@ class Scheduler(object):
             # get delay level
             delay_level = self.projectcache.get_project_delay_level(task['project'])
             # calc delay level time
-            schedule_age = age + int((delay_level * 0.5) * age)
+            schedule_age = age + int(delay_level * age)
             # max delay time is 0.5 days
             if schedule_age > 43200:
                 schedule_age = 43200
@@ -1302,7 +1302,6 @@ class ThreadBaseScheduler(Scheduler):
         while True:
             method, args, kwargs = queue.get()
             try:
-                time.sleep(0.1)
                 method(*args, **kwargs)
             except Exception as e:
                 logger.exception(e)

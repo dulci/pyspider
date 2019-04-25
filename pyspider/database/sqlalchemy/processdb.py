@@ -12,7 +12,7 @@ import json
 import sqlalchemy.exc
 
 from sqlalchemy import (create_engine, MetaData, Table, Column, Index,
-                        Integer, String, Float, LargeBinary, DateTime, func, and_)
+                        Integer, String, Float, LargeBinary, DateTime, func, and_, or_)
 from sqlalchemy.engine.url import make_url
 from pyspider.libs import utils
 from pyspider.database.base.processdb import ProcessDB as BaseProcessDB
@@ -101,7 +101,17 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
         if url is not None and url != '':
             whl_con = and_(whl_con, self.table.c.url == url)
         if status is not None and status != '':
-            whl_con = and_(whl_con, self.table.c.status == status)
+            status_con = None
+            status_list = status.split(",")
+            if len(status_list) > 1:
+                for i in range(len(status_list)):
+                    if i == 0:
+                        status_con = or_(self.table.c.status == status_list[i])
+                    else:
+                        status_con = or_(status_con, self.table.c.status == status_list[i])
+                whl_con = and_(whl_con, status_con)
+            else:
+                whl_con = and_(whl_con, self.table.c.status == status)
         if type is not None and type != 'all':
             whl_con = and_(whl_con, self.table.c.type == type)
         for process in self.engine.execute(self.table.select()
@@ -184,7 +194,17 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
         if url is not None and url != '':
             whl_con = and_(whl_con, self.table.c.url == url)
         if status is not None and status != '':
-            whl_con = and_(whl_con, self.table.c.status == status)
+            status_con = None
+            status_list = status.split(",")
+            if len(status_list) > 1:
+                for i in range(len(status_list)):
+                    if i == 0:
+                        status_con = or_(self.table.c.status == status_list[i])
+                    else:
+                        status_con = or_(status_con, self.table.c.status == status_list[i])
+                whl_con = and_(whl_con, status_con)
+            else:
+                whl_con = and_(whl_con, self.table.c.status == status)
         if type is not None and type != 'all':
             whl_con = and_(whl_con, self.table.c.type == type)
         for count, in self.engine.execute(self.table.count()
