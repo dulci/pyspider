@@ -432,6 +432,8 @@ class Fetcher(object):
 
     @gen.coroutine
     def http_fetch(self, url, task):
+        print('+++++++++++++++++')
+        print(url)
         '''HTTP fetcher'''
         start_time = time.time()
         self.on_fetch('http', task)
@@ -557,18 +559,19 @@ class Fetcher(object):
                 driver = self.drivers.get_driver(task.get('project'))
                 origin_url = driver.current_url
                 source_handle = driver.current_window_handle
-                if task.get('fetch', {}).get('css_selector'):
-                    WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, task.get('fetch', {}).get('css_selector'))))
-                    element = driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector'))
-                    driver.execute_script("arguments[0].scrollIntoView()", element)
-                    ActionChains(driver).move_to_element(element).click().perform()
-                    driver.switch_to_window(driver.window_handles[-1])
-                if task.get('fetch', {}).get('xpath_selector'):
-                    WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('xpath_selector'))))
-                    element = driver.find_element_by_xpath(task.get('fetch', {}).get('xpath_selector'))
-                    driver.execute_script("arguments[0].scrollIntoView()", element)
-                    ActionChains(driver).move_to_element(element).click().perform()
-                    driver.switch_to_window(driver.window_handles[-1])
+                self.webdriver_oper(driver, task.get('fetch', {}).get('css_selector'), task.get('fetch', {}).get('xpath_selector'))
+                # if task.get('fetch', {}).get('css_selector'):
+#                     WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, task.get('fetch', {}).get('css_selector'))))
+#                     element = driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector'))
+#                     driver.execute_script("arguments[0].scrollIntoView()", element)
+#                     ActionChains(driver).move_to_element(element).click().perform()
+#                     driver.switch_to_window(driver.window_handles[-1])
+#                 if task.get('fetch', {}).get('xpath_selector'):
+#                     WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('xpath_selector'))))
+#                     element = driver.find_element_by_xpath(task.get('fetch', {}).get('xpath_selector'))
+#                     driver.execute_script("arguments[0].scrollIntoView()", element)
+#                     ActionChains(driver).move_to_element(element).click().perform()
+#                     driver.switch_to_window(driver.window_handles[-1])
                 window_handle = driver.current_window_handle
                 content = driver.page_source if task.get('fetch', {}).get('encoder') == False else bytes(driver.page_source, encoding = "utf8")
                 url = driver.current_url
@@ -590,7 +593,6 @@ class Fetcher(object):
                     "save": task.get('fetch', {}).get('save')
             }
         except TimeoutException:
-            task.get('fetch', {}).get('document').execute_script('window.stop()')
             result = {
                     "orig_url": url,
                     "content": "load page is timeout",
@@ -915,6 +917,31 @@ class Fetcher(object):
         logger.info('fetcher.xmlrpc listening on %s:%s', bind, port)
         self.xmlrpc_ioloop.start()
 
+    def webdriver_oper(self, driver, css_path=None, xpath=None):
+        if css_path:
+            css_path_list = list()
+            if isinstance(css_path, str):
+                css_path_list.append(css_path)
+            elif isinstance(css_path, list):
+                css_path_list = css_path
+            for css_path_item in css_path_list:
+                WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, css_path_item)))
+                element = driver.find_element_by_css_selector(css_path_item)
+                driver.execute_script("arguments[0].scrollIntoView()", element)
+                ActionChains(driver).move_to_element(element).click().perform()
+            driver.switch_to_window(driver.window_handles[-1])
+        if xpath:
+            xpath_list = list()
+            if isinstance(xpath, str):
+                xpath_list.append(xpath)
+            elif isinstance(xpath, list):
+                xpath_list = xpath
+            for xpath_item in xpath_list:
+                WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.XPATH, xpath_item)))
+                element = driver.find_element_by_xpath(xpath_item)
+                driver.execute_script("arguments[0].scrollIntoView()", element)
+                ActionChains(driver).move_to_element(element).click().perform()
+            driver.switch_to_window(driver.window_handles[-1])
     def on_fetch(self, type, task):
         '''Called before task fetch'''
         pass
