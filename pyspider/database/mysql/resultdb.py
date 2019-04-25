@@ -155,6 +155,32 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
                                      offset=offset, limit=limit):
             yield self._parse(task)
 
+    def select(self, project, group, taskid=None, url=None, upload_status=None, fields=None, offset=0, limit=None):
+        if group == 'self_crawler':
+            tablename = "crawler_content_result_record"
+        elif group == 'completion_delay_monitoring':
+            tablename = "crawler_result_record"
+
+        where = "project = %s" + \
+                (" and `taskid` = %s" if taskid is not None and taskid != '' else "") + \
+                (" and `url` = %s" if url is not None and url != '' else "")
+        if upload_status is not None and upload_status != '':
+            upload_status_condition = ""
+            for i in upload_status.split(","):
+                upload_status_condition = upload_status_condition + " or `upload_status` = %s"
+            where = where + " and (" + upload_status_condition[3:] + ")"
+        where_values = list()
+        where_values.append(project)
+        if taskid is not None and taskid != '':
+            where_values.append(taskid)
+        if url is not None and url != '':
+            where_values.append(url)
+        if upload_status is not None and len(upload_status) > 0:
+            where_values.extend(upload_status.split(","))
+        for task in self._select2dic(tablename, where=where, where_values=where_values, what=fields, order='updatetime DESC',
+                                     offset=offset, limit=limit):
+            yield self._parse(task)
+
     def count(self, project, group):
         if group == 'self_crawler':
             tablename = "crawler_content_result_record"
@@ -162,6 +188,30 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             tablename = "crawler_result_record"
         for count, in self._execute("SELECT count(1) FROM %s WHERE `group` = '%s' and `project` = '%s'" % (self.escape(tablename), group, project)):
             return count
+
+    def count(self, project, group, taskid=None, url=None, upload_status=None):
+        if group == 'self_crawler':
+            tablename = "crawler_content_result_record"
+        elif group == 'completion_delay_monitoring':
+            tablename = "crawler_result_record"
+        count_sql = "SELECT count(1) FROM %s WHERE `group` = '%s' and `project` = '%s'" + (" and `taskid` = '%s'" if taskid is not None and taskid != '' else "") \
+                    + (" and `url` = '%s'" if url is not None and url != '' else "")
+        if upload_status is not None and upload_status != '':
+            upload_status_condition = ""
+            for i in upload_status.split(","):
+                upload_status_condition = upload_status_condition + " or `upload_status` = '%s'"
+            upload_status_condition = " and (" + upload_status_condition[3:] + ")"
+            count_sql = count_sql + upload_status_condition
+        count_sql_arg = [self.escape(tablename), group, project]
+        if taskid is not None and taskid != '':
+            count_sql_arg.append(taskid)
+        if url is not None and url != '':
+            count_sql_arg.append(url)
+        if upload_status is not None and upload_status != '':
+            count_sql_arg.extend(upload_status.split(","))
+        for count, in self._execute(count_sql % tuple(count_sql_arg)):
+            return count
+
 
     def get(self, project, taskid, fields=None):
         # if project not in self.projects:

@@ -17,8 +17,65 @@
   </head>
 
   <body>
-    <div class="top-bar">
+    <div class="top-bar" style="height: 105px;">
       <h1>{{ project }} - Results</h1>
+      <div>
+          <form method="get" action="/results">
+              <input type="hidden" name="group" value="{{ group }}" />
+              <input type="hidden" name="project" value="{{ project }}" />
+              <input type="hidden" name="offset" value="{{ offset }}" id="offset" />
+              <input type="hidden" name="limit" value="{{ limit }}" id="limit" />
+              <input type="hidden" name="current_page" value="{{ int(offset/limit) + (1 if offset % limit else 0) }}" id="current_page" />
+              <input type="hidden" name="total_page" value="{{ int(count/limit) + (1 if count % limit else 0) }}" id="total_page" />
+              <span>
+                taskid：
+                <input name="taskid" style="width: 300px;" value="{{ taskid }}" />
+              </span>
+              <span>
+                url：
+                <input name="url" style="width: 600px;" value="{{ url }}" />
+              </span>
+              <span>
+                status：
+                <select name="upload_status" id="search_status">
+                  <option value="" selected="selected">全部</option>
+                  <option value="0000,0001,0002,0003,0004,0005,0006,0007,0010,0100,0101,0102,0104,0105,0106,0107,0108,0109,0110,0111,0112,0113">上传失败快速筛选</option>
+                  <option value="0000">传入数据为空</option>
+                  <option value="0001">数据量批量传输上限500条</option>
+                  <option value="0002">crawlerTeamId 不能为空</option>
+                  <option value="0003">type对应的站源不存在</option>
+                  <option value="0004">非该团队的站源数据</option>
+                  <option value="0005">起始发布日期校验异常</option>
+                  <option value="0006">数据只能传一条</option>
+                  <option value="0007">图片或者附件数据已审核</option>
+                  <option value="0010">数据内容格式异常</option>
+                  <option value="0011">数据插入成功</option>
+                  <option value="0100">数据已经存在或者数据插入失败</option>
+                  <option value="0101">数据为空</option>
+                  <option value="0102">详情页标题长度大于500</option>
+                  <option value="0103">该url标讯已存在</option>
+                  <option value="0104">ddid不能为空</option>
+                  <option value="0105">type不能为空</option>
+                  <option value="0106">html不能为空</option>
+                  <option value="0107">jhycontent不能为空</option>
+                  <option value="0108">currentTime不能为空</option>
+                  <option value="0109">publishTime不能为空</option>
+                  <option value="0110">link不能为空</option>
+                  <option value="0111">jhytitle不能为空</option>
+                  <option value="0112">taskName不能为空</option>
+                  <option value="0113">contentTitle不能为空</option>
+                </select>
+              </span>
+              <span>
+                <button id="submit" type="submit" style="display: none" class="project-create btn btn-default btn-primary">Search</button>
+                <button id="btn_submit" type="button" class="project-create btn btn-default btn-primary">Search</button>
+              </span>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <span>
+                <a class="btn btn-default btn-xs" href="/process?project={{ project }}&group={{ group }}" target=_blank>Processes</a>
+              </span>
+          </form>
+      </div><br/>
       <div class="btn-group">
         <a href="/results/dump/{{ project }}-{{ group }}.json"
           target="_blank" class="btn btn-default btn-sm">
@@ -36,11 +93,23 @@
         <th>url</th>
         <th></th>
         <th>upload_status</th>
-        # for field in common_fields|sort
-        <th>
-          {{ field }}
-        </th>
-        # endfor
+{#        # for field in common_fields|sort#}
+{#        <th>#}
+{#          {{ field }}#}
+{#        </th>#}
+{#        # endfor#}
+        <th>taskid</th>
+        <th>taskName</th>
+        <th>type</th>
+        <th>ddid</th>
+        <th>crawlerTeamId</th>
+        <th>jhytitle</th>
+        <th>contentTitle</th>
+        <th>html</th>
+        <th>jhycontent</th>
+        <th>publishTime</th>
+        <th>currentTime</th>
+        <th>jump_process</th>
         <th>
           ...
         </th>
@@ -57,9 +126,50 @@
           <td>
             {{ result.upload_status }}
           </td>
-          # for field in common_fields|sort
-          <td>{{ json.dumps(result.result_formated[field], ensure_ascii=False) | truncate(100, True) }}</td>
-          # endfor
+          <td>
+            {{ result['result']['taskid'] }}
+          </td>
+          <td>
+            {{ result['result']['taskName'] }}
+          </td>
+          <td>
+            {{ result['result']['type'] }}
+          </td>
+          <td>
+            {{ result['result']['ddid'] }}
+          </td>
+          <td>
+            {{ result['result']['crawlerTeamId'] }}
+          </td>
+          <td>
+            {{ result['result']['jhytitle'] }}
+          </td>
+          <td>
+            {{ result['result']['contentTitle'] }}
+          </td>
+          <td>
+{#            {{ result['result']['html'] }}#}
+            <a title="{{ result['result']['html'] }}" onclick="alert($(this).attr('title'));">查看</a>
+          </td>
+          <td>
+{#            {{ result['result']['jhycontent'] }}#}
+            <a title="{{ result['result']['jhycontent'] }}" onclick="alert($(this).attr('title'));">查看</a>
+          </td>
+          <td>
+            {{ result['result']['publishTime'] }}
+          </td>
+          <td>
+            {{ result['result']['currentTime'] }}
+          </td>
+{#          <td>#}
+{#            <a title="{{ result['result']['html'] }}" onclick="alert($(this).attr('title'));">查看</a>#}
+{#          </td>#}
+{#          # for field in common_fields|sort#}
+{#          <td>{{ json.dumps(result.result_formated[field], ensure_ascii=False) | truncate(100, True) }}</td>#}
+{#          # endfor#}
+          <td>
+            <a href="/process?project={{ project }}&group={{ group }}&taskid={{ result['result']['taskid'] }}" target=_blank>Processes</a>
+          </td>
           <td>
             {{ json.dumps(result.others, ensure_ascii=False) | truncate(100, True) }}
           </td>
@@ -73,23 +183,62 @@
         # set count = count if count is not none else 0
         # set total_page = int(count/limit) + (1 if count%limit else 0)
         <li class="{{ "disabled" if current_page - 1 <= 0 else "" }}">
-          <a href="{% if current_page>1 %}/results?project={{ project }}&group={{ group }}&offset={{ (current_page-1)*limit }}&limit={{ limit }}{% endif %}">&laquo;</a>
+{#          <a href="{% if current_page>1 %}/results?project={{ project }}&group={{ group }}&offset={{ (current_page-1)*limit }}&limit={{ limit }}{% endif %}">&laquo;</a>#}
+          <a href="javascript: void(0);" onclick="prev_page()">&laquo;</a>
         </li>
         # set prev = 0
         # for i in range(0, total_page):
         # if abs(i-0) < 2 or abs(i-total_page) < 3 or -2 < i-current_page < 5:
           # set prev = i
           <li class="{% if i == current_page %}active{% endif %}">
-            <a href="/results?project={{ project }}&offset={{ i*limit }}&group={{ group }}&limit={{ limit }}">{{ i + 1 }}</a>
+{#            <a href="/results?project={{ project }}&offset={{ i*limit }}&group={{ group }}&limit={{ limit }}">{{ i + 1 }}</a>#}
+            <a href="javascript: void(0);" onclick="point_page({{ i + 1 }})">{{ i + 1 }}</a>
           </li>
         # elif prev == i-1:
         <li class="disabled"><a>…</a></li>
         # endif
         # endfor
         <li class="{{ "disabled" if current_page + 1 >= total_page else "" }}">
-          <a href="{% if current_page + 1<total_page %}/results?project={{ project }}&group={{ group }}&offset={{ (current_page + 1)*limit }}&limit={{ limit }}{% endif %}">&raquo;</a>
+{#          <a href="{% if current_page + 1<total_page %}/results?project={{ project }}&group={{ group }}&offset={{ (current_page + 1)*limit }}&limit={{ limit }}{% endif %}">&raquo;</a>#}
+          <a href="javascript: void(0);" onclick="next_page()">&raquo;</a>
         </li>
       </ul>
     </div>
+    <script type="application/javascript">
+      if ('{{ upload_status }}' != 'None') {
+          $("#search_status").val('{{ upload_status }}');
+      }
+      $("#btn_submit").click(function() {
+          $("#offset").val(0);
+          $("#submit").trigger('click');
+      })
+      function point_page(page) {
+          var page = parseInt(page);
+          var limit = parseInt($("#limit").val());
+          $("#offset").val((page - 1) * limit);
+          $("#submit").trigger('click');
+      }
+      function next_page() {
+          var current_page = parseInt($("#current_page").val());
+          var total_page = parseInt($("#total_page").val());
+          var limit = parseInt($("#limit").val());
+          if ((current_page + 1) < total_page) {
+              $("#offset").val((current_page + 1) * limit);
+          } else {
+              return;
+          }
+          $("#submit").trigger('click');
+      }
+      function prev_page() {
+          var limit = parseInt($("#limit").val());
+          var current_page = parseInt($("#current_page").val());
+          if (current_page != 0) {
+              $("#offset").val((current_page - 1) * limit);
+          } else {
+              return;
+          }
+          $("#submit").trigger('click');
+      }
+    </script>
   </body>
 </html>
