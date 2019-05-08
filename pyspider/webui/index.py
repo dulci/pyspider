@@ -220,7 +220,7 @@ def restartallword():
             task['lastcrawltime'] = None
             task['type'] = 1
             task['project_updatetime'] = time.time()
-            if result['status'] != 32 and type == 3:
+            if result['status'] != 32 and type == 3 and "placeholder.com" not in task['url'] and "placeholder-gcxx.com" not in task['url']:
                 app.config['queues']['scheduler2fetcher'].put(task)
         return json.dumps({"status": "success"}), 200, {'Content-Type': 'application/json'}
     except Exception as e:
