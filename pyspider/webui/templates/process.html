@@ -71,7 +71,7 @@
               </span>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <span>
-                <button id="restart_submit" type="submit" style="display: none" class="project-create btn btn-default btn-primary">RestartWork</button>
+{#                <button id="restart_submit" type="submit" style="display: none" class="project-create btn btn-default btn-primary">RestartWork</button>#}
                 <button id="restart_btn_submit" type="button" class="project-create btn btn-default btn-primary">RestartWork</button>
               </span>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -205,6 +205,10 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
           <td>
             <a href="/results?project={{ project }}&group={{ group }}&taskid={{ result.taskid }}" target=_blank>Results</a>
           </td>
+          <td>
+{#            <a href="/restartwork?project={{ project }}&group={{ group }}&taskid={{ result.taskid }}" target=_blank>RestartWork</a>#}
+              <a href="javascript: void(0);" onclick="restart_work('{{ result.taskid }}')">RestartWork</a>
+          </td>
         # endfor
       </tbody>
     </table>
@@ -245,9 +249,33 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
           $("#submit").trigger('click');
       });
       $("#restart_btn_submit").click(function() {
-          $("#offset").val(0);
-          document.getElementById('process_form').action='/restart/allwork';
-          $("#restart_submit").trigger('click');
+          {#$("#offset").val(0);#}
+          {#document.getElementById('process_form').action='/restartwork';#}
+          {#$("#restart_submit").trigger('click');#}
+          var group = document.getElementsByName("group")[0].value;
+          var project = document.getElementsByName("project")[0].value;
+          var taskid = document.getElementsByName("taskid")[0].value;
+          var url = document.getElementsByName("url")[0].value;
+          var type = document.getElementsByName("type")[0].value;
+          var status = document.getElementsByName("status")[0].value;
+          $.ajax({
+              type:"GET",
+              url:"/restartwork",
+              data:{
+                  group: group,
+                  project: project,
+                  taskid: taskid,
+                  url: url,
+                  type: type,
+                  status: status
+              },
+              success: function(data){
+                  alert("restart success!")
+              },
+              error: function (data) {
+                  alert("restart failure!")
+              }
+          });
       });
       function point_page(page) {
           var page = parseInt(page);
@@ -275,6 +303,26 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
               return;
           }
           $("#submit").trigger('click');
+      }
+      function restart_work(taskid) {
+          var group = document.getElementsByName("group")[0].value;
+          var project = document.getElementsByName("project")[0].value;
+          var taskid = taskid;
+          $.ajax({
+              type:"GET",
+              url:"/restartwork",
+              data:{
+                  group: group,
+                  project: project,
+                  taskid: taskid
+              },
+              success: function(data){
+                  alert("restart success!")
+              },
+              error: function (data) {
+                  alert("restart failure!")
+              }
+          });
       }
     </script>
   </body>

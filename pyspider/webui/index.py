@@ -7,6 +7,7 @@
 
 import socket
 import math
+import time
 
 from six import iteritems, itervalues
 from flask import render_template, request, json
@@ -193,6 +194,37 @@ def runtask():
         app.logger.warning('connect to scheduler rpc error: %r', e)
         return json.dumps({"result": False}), 200, {'Content-Type': 'application/json'}
     return json.dumps({"result": ret}), 200, {'Content-Type': 'application/json'}
+
+
+@app.route('/restartallwork', methods=['POST', ])
+def restartallword():
+    processdb = app.config['processdb']
+    # 根据task_id、url、type、status取task当前状态
+    project = request.args.get('project')
+    group = request.args.get('group', 'self_crawler')
+    status = "1,2,3,11,12,13,14,21,22,23,31,33"
+    task_results = list(processdb.select(project, group, taskid='', url='', status=status, type=3))
+    try:
+        for result in task_results:
+            task = dict()
+            task['taskid'] = result['taskid']
+            task['url'] = result['url']
+            task['project'] = result['project']
+            task['fetch'] = result['fetch']
+            task['process'] = result['process']
+            task['group'] = result['group']
+            schedule = {'force_update': True, 'age': 0}
+            task['schedule'] = schedule
+            task['status'] = 1
+            task['track'] = {}
+            task['lastcrawltime'] = None
+            task['type'] = 1
+            task['project_updatetime'] = time.time()
+            if result['status'] != 32 and type == 3:
+                app.config['queues']['scheduler2fetcher'].put(task)
+        return json.dumps({"status": "success"}), 200, {'Content-Type': 'application/json'}
+    except Exception as e:
+        return json.dumps({"error": e}), 404, {'Content-Type': 'application/json'}
 
 
 @app.route('/clean', methods=['POST', ])
