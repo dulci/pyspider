@@ -38,7 +38,7 @@ def process():
         type='' if type is None else type
     )
 
-@app.route('/restart/allwork')
+@app.route('/restartwork')
 def restart_allwork():
     processdb = app.config['processdb']
     # 根据task_id、url、type、status取task当前状态
@@ -48,39 +48,28 @@ def restart_allwork():
     url = request.args.get('url')
     status = request.args.get('status')
     type = request.args.get('type', 3)
-    offset = int(request.args.get('offset', 0))
-    limit = int(request.args.get('limit', 20))
     task_results = list(processdb.select(project, group, taskid=taskid, url=url, status=status, type=type))
-    for result in task_results:
-        task = dict()
-        task['taskid'] = result['taskid']
-        task['url'] = result['url']
-        task['project'] = result['project']
-        task['fetch'] = result['fetch']
-        task['process'] = result['process']
-        task['group'] = result['group']
-        schedule = {'force_update': True, 'age': 0}
-        task['schedule'] = schedule
-        task['status'] = 1
-        task['track'] = {}
-        task['lastcrawltime'] = None
-        task['type'] = 1
-        task['project_updatetime'] = time.time()
-        if result['status'] != 32 and type == 3:
-            app.config['queues']['scheduler2fetcher'].put(task)
-
-    count = processdb.count(project, group, taskid=taskid, url=url, status=status, type=type)
-    results = list(
-        processdb.select(project, group, taskid=taskid, url=url, status=status, type=type, offset=offset, limit=limit))
-    common_fields = ('status', 'fetch', 'process', 'scheduler', 'fetcher', 'processor', 'result_worker')
-
-    return render_template(
-        "process.html", count=count, results=results, group=group,
-        project=project, offset=offset, limit=limit, json=json,
-        common_fields=common_fields, taskid='' if taskid is None else taskid,
-        url='' if url is None else url, status='' if status is None else status,
-        type='' if type is None else type
-    )
+    try:
+        for result in task_results:
+            task = dict()
+            task['taskid'] = result['taskid']
+            task['url'] = result['url']
+            task['project'] = result['project']
+            task['fetch'] = result['fetch']
+            task['process'] = result['process']
+            task['group'] = result['group']
+            schedule = {'force_update': True, 'age': 0}
+            task['schedule'] = schedule
+            task['status'] = 1
+            task['track'] = {}
+            task['lastcrawltime'] = None
+            task['type'] = 1
+            task['project_updatetime'] = time.time()
+            if result['status'] != 32 and type == 3:
+                app.config['queues']['scheduler2fetcher'].put(task)
+        return json.dumps({"status": "success"}), 200, {'Content-Type': 'application/json'}
+    except Exception as e:
+        return json.dumps({"error": e}), 404, {'Content-Type': 'application/json'}
 
 
 

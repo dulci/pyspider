@@ -202,7 +202,7 @@ def restartallword():
     # 根据task_id、url、type、status取task当前状态
     project = request.args.get('project')
     group = request.args.get('group', 'self_crawler')
-    status = "1,2,3,11,12,13,14,21,22,23,31,33"
+    status = "1,3,11,13,14,21,23,31,33"
     task_results = list(processdb.select(project, group, taskid='', url='', status=status, type=3))
     try:
         for result in task_results:
