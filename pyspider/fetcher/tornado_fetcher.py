@@ -483,7 +483,7 @@ class Fetcher(object):
                 logger.exception(fetch)
                 raise gen.Return(handle_error(e))
 
-            if not (True if str(task['skip_fetcher']).lower() == 'true' else False):
+            if not (True if str(task.get('fetch', {}).get('skip_fetcher')).lower() == 'true' else False):
                 try:
                     response = yield gen.maybe_future(self.http_client.fetch(request))
                 except tornado.httpclient.HTTPError as e:
@@ -514,7 +514,7 @@ class Fetcher(object):
 
             result = {}
             result['orig_url'] = url
-            if not (True if str(task['skip_fetcher']).lower() == 'true' else False):
+            if not (True if str(task.get('fetch', {}).get('skip_fetcher')).lower() == 'true' else False):
                 result['content'] = response.body or ''
                 result['headers'] = dict(response.headers)
                 result['status_code'] = response.code
@@ -526,7 +526,7 @@ class Fetcher(object):
             result['cookies'] = session.get_dict()
             result['save'] = task_fetch.get('save')
 
-            if not (True if str(task['skip_fetcher']).lower() == 'true' else False):
+            if not (True if str(task.get('fetch', {}).get('skip_fetcher')).lower() == 'true' else False):
                 if response.error:
                     result['error'] = utils.text(response.error)
                 if 200 <= response.code < 300:

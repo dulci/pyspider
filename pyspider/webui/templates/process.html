@@ -20,7 +20,7 @@
     <div class="top-bar" style="height: 105px;">
       <h1>{{ project }} - Processes</h1><br/>
       <div>
-          <form method="get" action="/process">
+          <form name="process_form" id="process_form" method="get" action="/process">
               <input type="hidden" name="group" value="{{ group }}" />
               <input type="hidden" name="project" value="{{ project }}" />
               <input type="hidden" name="offset" value="{{ offset }}" id="offset" />
@@ -68,6 +68,11 @@
               <span>
                 <button id="submit" type="submit" style="display: none" class="project-create btn btn-default btn-primary">Search</button>
                 <button id="btn_submit" type="button" class="project-create btn btn-default btn-primary">Search</button>
+              </span>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <span>
+                <button id="restart_submit" type="submit" style="display: none" class="project-create btn btn-default btn-primary">RestartWork</button>
+                <button id="restart_btn_submit" type="button" class="project-create btn btn-default btn-primary">RestartWork</button>
               </span>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <span>
@@ -238,7 +243,12 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
       $("#btn_submit").click(function() {
           $("#offset").val(0);
           $("#submit").trigger('click');
-      })
+      });
+      $("#restart_btn_submit").click(function() {
+          $("#offset").val(0);
+          document.getElementById('process_form').action='/restart/allwork';
+          $("#restart_submit").trigger('click');
+      });
       function point_page(page) {
           var page = parseInt(page);
           var limit = parseInt($("#limit").val());

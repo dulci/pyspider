@@ -43,6 +43,8 @@ class ResultWorker(object):
             oldTask = self.resultdb.get_content(task['project'], task['taskid'])
             if oldTask is not None:
                 logger.info('result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+                if self.processdb is not None:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=32)
                 return
 
         # reset project delay level
