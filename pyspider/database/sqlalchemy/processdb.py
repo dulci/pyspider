@@ -95,7 +95,9 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
     def select(self, project, group, taskid=None, url=None, status=None, type=None, fields=None, offset=0, limit=None):
         self.table.name = self.__tablename__
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
-        whl_con = and_(self.table.c.project == project, self.table.c.group == group)
+        whl_con = and_(self.table.c.group == group)
+        if project is not None and project != '':
+            whl_con = and_(whl_con, self.table.c.project == project)
         if taskid is not None and taskid != '':
             whl_con = and_(whl_con, self.table.c.taskid == taskid)
         if url is not None and url != '':
