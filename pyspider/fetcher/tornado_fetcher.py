@@ -181,12 +181,12 @@ class Fetcher(object):
             result['status_code'] = 200
             if 'error' in result:
                 del result['error']
-        callback(type, task, result)
-        self.on_result(type, task, result)
         if task.get('fetch', {}).get('sequence'):
             result['sequence'] = int(task.get('fetch', {}).get('sequence')) - 1
         if task.get('fetch', {}).get('page_num'):
             result['page_num'] = int(task.get('fetch', {}).get('page_num')) - 1
+        callback(type, task, result)
+        self.on_result(type, task, result)
         raise gen.Return(result)
 
     def sync_fetch(self, task):
@@ -552,7 +552,7 @@ class Fetcher(object):
                 driver = self.drivers.get_driver(task.get('project'), True)
                 driver.get(url)
                 origin_url = driver.current_url
-                content = driver.page_source if task.get('fetch', {}).get('encoder') == False else bytes(driver.page_source, encoding = "utf8")
+                content = driver.page_source if task.get('fetch', {}).get('encoder') is False else bytes(driver.page_source, encoding="utf8")
                 url = origin_url
             elif task.get('fetch', {}).get('css_selector') or task.get('fetch', {}).get('xpath_selector'):
                 assert self.drivers.get_driver(task.get('project')), 'no webdriver'
@@ -573,7 +573,7 @@ class Fetcher(object):
 #                     ActionChains(driver).move_to_element(element).click().perform()
 #                     driver.switch_to_window(driver.window_handles[-1])
                 window_handle = driver.current_window_handle
-                content = driver.page_source if task.get('fetch', {}).get('encoder') == False else bytes(driver.page_source, encoding = "utf8")
+                content = driver.page_source if task.get('fetch', {}).get('encoder') is False else bytes(driver.page_source, encoding="utf8")
                 url = driver.current_url
                 if task.get('fetch', {}).get('is_final'):
                     if window_handle == source_handle:
