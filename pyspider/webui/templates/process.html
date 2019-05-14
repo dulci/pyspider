@@ -53,6 +53,7 @@
                   <option value="1">任务创建</option>
                   <option value="2">任务已发到scheduler2fetcher队列成功</option>
                   <option value="3">任务已发到scheduler2fetcher队列失败</option>
+                  <option value="4">resultdb中重复</option>
                   <option value="11">fetcher开始处理</option>
                   <option value="12">fetcher处理成功，任务发送到fetcher2processor队列</option>
                   <option value="13">fetcher获取失败</option>
@@ -144,6 +145,8 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
                 任务已发到scheduler2fetcher队列成功
               # elif result.status == 3:
                 任务已发到scheduler2fetcher队列失败
+              # elif result.status == 4:
+                resultdb中重复
               # elif result.status == 11:
                 fetcher开始处理
               # elif result.status == 12:
