@@ -551,6 +551,8 @@ class Fetcher(object):
             if url is not None and (not task.get('fetch', {}).get('css_selector') and not task.get('fetch', {}).get('xpath_selector')):
                 driver = self.drivers.get_driver(task.get('project'), True)
                 driver.get(url)
+                if task.get('fetch', {}).get('wait_for_xpath'):
+                    WebDriverWait(driver, 10, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('wait_for_xpath'))))
                 origin_url = driver.current_url
                 content = driver.page_source if task.get('fetch', {}).get('encoder') is False else bytes(driver.page_source, encoding="utf8")
                 url = origin_url
@@ -559,7 +561,10 @@ class Fetcher(object):
                 driver = self.drivers.get_driver(task.get('project'))
                 origin_url = driver.current_url
                 source_handle = driver.current_window_handle
+                source_html = driver.find_element_by_xpath(task.get('fetch', {}).get('wait_for_xpath')).text if task.get('fetch', {}).get('wait_for_xpath') else ''
                 self.webdriver_oper(driver, task.get('fetch', {}).get('css_selector'), task.get('fetch', {}).get('xpath_selector'))
+                if task.get('fetch', {}).get('wait_for_xpath'):
+                    WebDriverWait(driver, 10, 0.5).until_not(EC.text_to_be_present_in_element((By.XPATH, task.get('fetch', {}).get('wait_for_xpath')), source_html))
                 # if task.get('fetch', {}).get('css_selector'):
 #                     WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, task.get('fetch', {}).get('css_selector'))))
 #                     element = driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector'))
