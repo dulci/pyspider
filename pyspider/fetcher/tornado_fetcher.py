@@ -38,6 +38,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
@@ -90,11 +91,12 @@ class Fetcher(object):
     splash_lua_source = open(os.path.join(os.path.dirname(__file__), "splash_fetcher.lua")).read()
     robot_txt_age = 60*60  # 1h
 
-    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None, processdb=None):
+    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None, processdb=None, taskdb=None):
         self.inqueue = inqueue
         self.outqueue = outqueue
 
         self.processdb = processdb
+        self.taskdb = taskdb
 
         self.poolsize = poolsize
         self._running = False
@@ -602,7 +604,21 @@ class Fetcher(object):
                     "save": task.get('fetch', {}).get('save'),
                     "save": task.get('fetch', {}).get('save')
             }
-            logger.warning("[504] %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            logger.warning("[504] webdriver timeout %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+        except WebDriverException:
+            result = {
+                "orig_url": url,
+                "content": "webdriver not found",
+                "headers": {},
+                "status_code": 500,
+                "url": url,
+                "time": time.time() - start_time,
+                "cookies": {},
+                "save": task.get('fetch', {}).get('save'),
+                "save": task.get('fetch', {}).get('save')
+            }
+            logger.warning("[500] webdriver not found %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            self.drivers.delete_driver(task.get('project'))
         result['configure'] = self.configure
         result['project_name'] = task.get('project')
         raise gen.Return(result)

@@ -16,3 +16,7 @@ class WebDrivers(metaclass=Singleton):
         if self.drivers.get(project):
             self.drivers.get(project).quit()
             del self.drivers[project]
+
+    def delete_driver(self, project):
+        if self.drivers.get(project):
+            self.drivers.pop(project)
