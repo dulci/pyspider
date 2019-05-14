@@ -40,7 +40,7 @@ class ProcessDB(MySQLMixin, SplitTableMixin, BaseProcessDB, BaseDB):
               `project` varchar(64) NOT NULL COMMENT '站源标识',
               `group` varchar(64) DEFAULT NULL COMMENT '分组',
               `type` int(11) DEFAULT 3 COMMENT '类型',
-              `status` int(1) DEFAULT NULL COMMENT '任务状态 1：任务创建，2：任务已发到scheduler2fetcher队列成功，3：任务已发到scheduler2fetcher队列失败，11：fetcher开始处理，12：fetcher处理成功，任务已发送到fetcher2processor队列，13：fetcher获取失败，14：fetcher队列发送失败，21：processor开始处理，22：processor处理成功，任务发送到processor2result队列，23：processor处理失败，31：result_worker开始处理，32：result_worker处理完成，33：result_worker处理失败',
+              `status` int(1) DEFAULT NULL COMMENT '任务状态 1：任务创建，2：任务已发到scheduler2fetcher队列成功，3：任务已发到scheduler2fetcher队列失败，4: resultdb中重复，11：fetcher开始处理，12：fetcher处理成功，任务已发送到fetcher2processor队列，13：fetcher获取失败，14：fetcher队列发送失败，21：processor开始处理，22：processor处理成功，任务发送到processor2result队列，23：processor处理失败，31：result_worker开始处理，32：result_worker处理完成，33：result_worker处理失败',
               `process` mediumblob DEFAULT NULL COMMENT 'process描述',
               `fetch` mediumblob DEFAULT NULL COMMENT 'fetch描述',
               `fetcher_response_code` int(11) DEFAULT NULL COMMENT 'fetcher返回值',

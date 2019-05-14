@@ -52,37 +52,45 @@ class ResultWorker(object):
             self.projectcache.set_project_delay_level(task['project'], 0)
         '''Called every result'''
         if not result:
+            if self.processdb is not None:
+                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=34)
             return
         if 'taskid' in task and 'project' in task and 'url' in task:
-            logger.info('result %s:%s %s -> %.30r' % (
-                task['project'], task['taskid'], task['url'], result))
-            result_content = dict()
-            if task['group'] == 'self_crawler':
-                result_content['taskid'] = task['taskid']
-                result_content['ddid'] = md5string(result['html'])
-                result_content['type'] = task['project']
-                result_content['html'] = str(result['html'])
-                result_content['jhycontent'] = str(result['jhycontent'])
-                result_content['currentTime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                result_content['publishTime'] = result['publishTime']
-                result_content['link'] = task['url']
-                result_content['jhytitle'] = result['title']
-                result_content['taskName'] = result['taskName']
-                result_content['contentTitle'] = result['contentTitle']
-                result_content['crawlerTeamId'] = result['crawlerTeamId']
-                result = result_content
-            res = self.resultdb.save(
-                project=task['project'],
-                taskid=task['taskid'],
-                url=task['url'],
-                result=result,
-                group=task['group'])
-            if task['group'] == 'self_crawler':
-                result_content_str = json.dumps(result_content)
-                self.content_queue.put(result_content_str)
-            if self.processdb is not None:
-                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=32)
-            return res
+            try:
+                logger.info('result %s:%s %s -> %.30r' % (
+                    task['project'], task['taskid'], task['url'], result))
+                result_content = dict()
+                if task['group'] == 'self_crawler':
+                    result_content['taskid'] = task['taskid']
+                    result_content['ddid'] = md5string(result['html'])
+                    result_content['type'] = task['project']
+                    result_content['html'] = str(result['html'])
+                    result_content['jhycontent'] = str(result['jhycontent'])
+                    result_content['currentTime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    result_content['publishTime'] = result['publishTime']
+                    result_content['link'] = task['url']
+                    result_content['jhytitle'] = result['title']
+                    result_content['taskName'] = result['taskName']
+                    result_content['contentTitle'] = result['contentTitle']
+                    result_content['crawlerTeamId'] = result['crawlerTeamId']
+                    result = result_content
+                res = self.resultdb.save(
+                    project=task['project'],
+                    taskid=task['taskid'],
+                    url=task['url'],
+                    result=result,
+                    group=task['group'])
+                if task['group'] == 'self_crawler':
+                    result_content_str = json.dumps(result_content)
+                    self.content_queue.put(result_content_str)
+                if self.processdb is not None:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=32)
+                return res
+            except Exception as e:
+                if self.processdb is not None:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=35)
+                logger.warning('result svae failure -> %.30r' % e)
+                return
         else:
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=33)

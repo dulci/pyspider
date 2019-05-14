@@ -355,6 +355,23 @@ class Scheduler(object):
 
         out queue may have size limit to prevent block, a send_buffer is used
         '''
+
+        # repeat check in resultdb
+        if task['group'] is not None and task['group'] != 'self_crawler':
+            oldTask = self.resultdb.get(task['project'], task['taskid'])
+            if oldTask is not None:
+                if self.processdb is not None and oldTask.get('status') is not None and oldTask.get('status') != 32:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
+                logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+                return
+        elif task['group'] is not None and task['group'] == 'self_crawler':
+            oldTask = self.resultdb.get_content(task['project'], task['taskid'])
+            if oldTask is not None:
+                if self.processdb is not None and oldTask.get('status') is not None and oldTask.get('status') != 32:
+                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
+                logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+                return
+
         try:
             self.out_queue.put_nowait(task)
             if self.processdb is not None:
@@ -1002,7 +1019,9 @@ class Scheduler(object):
         retried = task['schedule'].get('retried', 0)
 
         project_info = self.projects[task['project']]
-        retry_delay = project_info.retry_delay or self.DEFAULT_RETRY_DELAY
+        retry_delay = self.DEFAULT_RETRY_DELAY
+        # if project_info.get('retry_delay') is not None:
+        #     retry_delay = project_info.retry_delay
         next_exetime = retry_delay.get(retried, retry_delay.get('', self.DEFAULT_RETRY_DELAY['']))
 
         if task['schedule'].get('auto_recrawl') and 'age' in task['schedule']:

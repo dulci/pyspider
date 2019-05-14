@@ -49,10 +49,11 @@
                 status：
                 <select name="status" id="search_status">
                   <option value="" selected="selected">全部</option>
-                  <option value="1,3,11,13,14,21,23,31,33">快速筛选抓取失败任务</option>
+                  <option value="1,3,11,13,14,21,23,31,33,34,35">快速筛选抓取失败任务</option>
                   <option value="1">任务创建</option>
                   <option value="2">任务已发到scheduler2fetcher队列成功</option>
                   <option value="3">任务已发到scheduler2fetcher队列失败</option>
+                  <option value="4">resultdb中重复</option>
                   <option value="11">fetcher开始处理</option>
                   <option value="12">fetcher处理成功，任务发送到fetcher2processor队列</option>
                   <option value="13">fetcher获取失败</option>
@@ -63,6 +64,8 @@
                   <option value="31">result_worker开始处理</option>
                   <option value="32">result_worker处理完成</option>
                   <option value="33">result_worker处理失败</option>
+                  <option value="34">result结果为空</option>
+                  <option value="35">result_worker保存结果失败</option>
                 </select>
               </span>
               <span>
@@ -142,6 +145,8 @@ title: {{ result['fetch']['save']['title'] }}" onclick="alert($(this).attr('titl
                 任务已发到scheduler2fetcher队列成功
               # elif result.status == 3:
                 任务已发到scheduler2fetcher队列失败
+              # elif result.status == 4:
+                resultdb中重复
               # elif result.status == 11:
                 fetcher开始处理
               # elif result.status == 12:
