@@ -561,7 +561,7 @@ class Fetcher(object):
                 # assert self.drivers.get_driver(task.get('project')), 'no webdriver'
                 if not self.drivers.get_driver(task.get('project')):
                     logging.info('webdriver has gone, i can not continue to work')
-                    error = tornado.httpclient.HTTPError(500, 'webdriver has gone')
+                    error = tornado.httpclient.HTTPError(201, 'webdriver has gone')
                     raise gen.Return(handle_error(error))
                 driver = self.drivers.get_driver(task.get('project'))
                 origin_url = driver.current_url

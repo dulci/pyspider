@@ -133,6 +133,9 @@ class Processor(object):
                         continue
                     track_headers[name] = response.headers[name]
 
+            if response.status_code == 201:
+                ret.exception = None
+
             status_pack = {
                 'taskid': task['taskid'],
                 'project': task['project'],
