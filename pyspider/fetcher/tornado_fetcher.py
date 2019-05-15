@@ -181,6 +181,9 @@ class Fetcher(object):
             result['status_code'] = 200
             if 'error' in result:
                 del result['error']
+        if result['status_code'] == 201:
+            if 'error' in result:
+                del result['error']
         if task.get('fetch', {}).get('sequence'):
             result['sequence'] = int(task.get('fetch', {}).get('sequence')) - 1
         if task.get('fetch', {}).get('page_num'):
@@ -611,7 +614,6 @@ class Fetcher(object):
                     "url": url,
                     "time": time.time() - start_time,
                     "cookies": {},
-                    "save": task.get('fetch', {}).get('save'),
                     "save": task.get('fetch', {}).get('save')
             }
             logger.warning("[504] webdriver timeout %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
@@ -624,7 +626,6 @@ class Fetcher(object):
                 "url": url,
                 "time": time.time() - start_time,
                 "cookies": {},
-                "save": task.get('fetch', {}).get('save'),
                 "save": task.get('fetch', {}).get('save')
             }
             logger.warning("[500] webdriver not found %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
