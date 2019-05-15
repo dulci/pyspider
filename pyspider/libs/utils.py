@@ -482,7 +482,7 @@ def is_all_url_exists(db_str, project, url_list):
 
 def is_need_to_paging(db_str, project, url_list, sequence=None, can_page_num=None):
     all_exists = is_all_url_exists(db_str, project, url_list)
-    logging.error("is_need_to_paging projcect=%s, all_exists=%s, sequence=%s, can_page_num=%s"%(project, all_exists, sequence, can_page_num))
+    logging.info("is_need_to_paging projcect=%s, all_exists=%s, sequence=%s, can_page_num=%s"%(project, all_exists, sequence, can_page_num))
     if can_page_num is not None and int(can_page_num) == 0:
         return False
     if sequence:

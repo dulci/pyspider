@@ -547,6 +547,7 @@ class Fetcher(object):
     def webdriver_fetch(self, url, task):
         start_time = time.time()
         self.on_fetch('phantomjs', task)
+        handle_error = lambda x: self.handle_error('http', url, task, start_time, x)
         try:
             if url is not None and (not task.get('fetch', {}).get('css_selector') and not task.get('fetch', {}).get('xpath_selector')):
                 driver = self.drivers.get_driver(task.get('project'), True)
@@ -557,7 +558,11 @@ class Fetcher(object):
                 content = driver.page_source if task.get('fetch', {}).get('encoder') is False else bytes(driver.page_source, encoding="utf8")
                 url = origin_url
             elif task.get('fetch', {}).get('css_selector') or task.get('fetch', {}).get('xpath_selector'):
-                assert self.drivers.get_driver(task.get('project')), 'no webdriver'
+                # assert self.drivers.get_driver(task.get('project')), 'no webdriver'
+                if not self.drivers.get_driver(task.get('project')):
+                    logging.info('webdriver has gone, i can not continue to work')
+                    error = tornado.httpclient.HTTPError(500, 'webdriver has gone')
+                    raise gen.Return(handle_error(error))
                 driver = self.drivers.get_driver(task.get('project'))
                 origin_url = driver.current_url
                 source_handle = driver.current_window_handle
