@@ -126,9 +126,6 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             tablename = "crawler_content_result_record"
         else:
             tablename = "crawler_result_record"
-        if tablename not in self.projects:
-            self._create_project(project)
-            self._list_project()
         self.table.name = self._tablename(tablename)
         obj = {
             'project': project,
