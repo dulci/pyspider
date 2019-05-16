@@ -83,8 +83,8 @@ class Fetcher(object):
         'headers': {
         },
         'use_gzip': True,
-        'timeout': 40,
-        'connect_timeout': 10,
+        'timeout': 60,
+        'connect_timeout': 30,
     }
     phantomjs_proxy = None
     splash_endpoint = None
@@ -179,6 +179,9 @@ class Fetcher(object):
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], fetcher_response_code=result['status_code'], status=13)
         if result['status_code'] == 521:
             result['status_code'] = 200
+            if 'error' in result:
+                del result['error']
+        if result['status_code'] == 201:
             if 'error' in result:
                 del result['error']
         if task.get('fetch', {}).get('sequence'):
@@ -339,7 +342,7 @@ class Fetcher(object):
             robot_txt = RobotFileParser()
             try:
                 response = yield gen.maybe_future(self.http_client.fetch(
-                    urljoin(url, '/robots.txt'), connect_timeout=10, request_timeout=30))
+                    urljoin(url, '/robots.txt'), connect_timeout=30, request_timeout=60))
                 content = response.body
             except tornado.httpclient.HTTPError as e:
                 logger.error('load robots.txt from %s error: %r', domain, e)
@@ -561,7 +564,7 @@ class Fetcher(object):
                 # assert self.drivers.get_driver(task.get('project')), 'no webdriver'
                 if not self.drivers.get_driver(task.get('project')):
                     logging.info('webdriver has gone, i can not continue to work')
-                    error = tornado.httpclient.HTTPError(500, 'webdriver has gone')
+                    error = tornado.httpclient.HTTPError(201, 'webdriver has gone')
                     raise gen.Return(handle_error(error))
                 driver = self.drivers.get_driver(task.get('project'))
                 origin_url = driver.current_url
@@ -611,7 +614,6 @@ class Fetcher(object):
                     "url": url,
                     "time": time.time() - start_time,
                     "cookies": {},
-                    "save": task.get('fetch', {}).get('save'),
                     "save": task.get('fetch', {}).get('save')
             }
             logger.warning("[504] webdriver timeout %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
@@ -624,7 +626,6 @@ class Fetcher(object):
                 "url": url,
                 "time": time.time() - start_time,
                 "cookies": {},
-                "save": task.get('fetch', {}).get('save'),
                 "save": task.get('fetch', {}).get('save')
             }
             logger.warning("[500] webdriver not found %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
@@ -674,8 +675,8 @@ class Fetcher(object):
         request_conf = {
             'follow_redirects': False
         }
-        request_conf['connect_timeout'] = fetch.get('connect_timeout', 20)
-        request_conf['request_timeout'] = fetch.get('request_timeout', 120) + 1
+        request_conf['connect_timeout'] = fetch.get('connect_timeout', 30)
+        request_conf['request_timeout'] = fetch.get('request_timeout', 60) + 1
 
         session = cookies.RequestsCookieJar()
         if 'Cookie' in fetch['headers']:
@@ -789,8 +790,8 @@ class Fetcher(object):
                 'Content-Type': 'application/json',
             }
         }
-        request_conf['connect_timeout'] = fetch.get('connect_timeout', 20)
-        request_conf['request_timeout'] = fetch.get('request_timeout', 120) + 1
+        request_conf['connect_timeout'] = fetch.get('connect_timeout', 30)
+        request_conf['request_timeout'] = fetch.get('request_timeout', 60) + 1
 
         session = cookies.RequestsCookieJar()
         if 'Cookie' in fetch['headers']:
