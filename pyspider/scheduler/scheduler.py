@@ -150,7 +150,7 @@ class Scheduler(object):
     LOOP_INTERVAL = 0.1
     ACTIVE_TASKS = 100
     INQUEUE_LIMIT = 0
-    EXCEPTION_LIMIT = 200
+    EXCEPTION_LIMIT = 999
     DELETE_TIME = 24 * 60 * 60
     DEFAULT_RETRY_DELAY = {
         0: 30,
@@ -343,6 +343,8 @@ class Scheduler(object):
     def put_task(self, task):
         '''put task to task queue'''
         _schedule = task.get('schedule', self.default_schedule)
+        if task['project'] not in self.projects:
+            return
         self.projects[task['project']].task_queue.put(
             task['taskid'],
             priority=_schedule.get('priority', self.default_schedule['priority']),
