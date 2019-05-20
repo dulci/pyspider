@@ -750,11 +750,13 @@ class Scheduler(object):
                 self.run_once()
                 self._exceptions = 0
             except KeyboardInterrupt:
+                logger.error("Scheduler exit by KeyboardInterrupt")
                 break
             except Exception as e:
                 logger.exception(e)
                 self._exceptions += 1
                 if self._exceptions > self.EXCEPTION_LIMIT:
+                    logger.error("cheduler exception times exceed setup limitation num")
                     break
                 continue
 
