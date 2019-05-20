@@ -371,7 +371,7 @@ class Scheduler(object):
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
                 logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
                 return
-        elif task['group'] is not None and task['group'] == 'self_crawler':
+        elif task['group'] is not None and (task['group'] == 'self_crawler' or task['group'] == 'temp_crawler'):
             oldTask = self.resultdb.get_content(task['project'], task['taskid'])
             if oldTask is not None:
                 if self.processdb is not None:
