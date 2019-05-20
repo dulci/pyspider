@@ -6,11 +6,13 @@
 # Created on 2014-12-04 18:48:47
 
 import time
-
+import logging
+logger = logging.getLogger('database')
 
 def result2dict(columns, task):
     r = {}
     for key in task.keys():
+        logger.info("key is %s"%(key))
         r[key] = task[key]
     return r
 
