@@ -168,7 +168,7 @@ class Scheduler(object):
     REQUEST_PACK = 3  # current not used
 
     def __init__(self, taskdb, projectdb, projectcache, newtask_queue, status_queue,
-                 out_queue, data_path='./data', processdb=None, resultdb=None):
+                 out_queues, data_path='./data', processdb=None, resultdb=None):
         self.taskdb = taskdb
         self.projectdb = projectdb
         self.projectcache = projectcache
@@ -176,7 +176,7 @@ class Scheduler(object):
         self.processdb = processdb
         self.newtask_queue = newtask_queue
         self.status_queue = status_queue
-        self.out_queue = out_queue
+        self.out_queues = out_queues
         self.data_path = data_path
 
         self._send_buffer = deque()
@@ -373,7 +373,19 @@ class Scheduler(object):
                 return
 
         try:
-            self.out_queue.put_nowait(task)
+            if task.get('schedule', {}).get('queue_name'):
+                out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
+            else:
+                for one in self.out_queues:
+                    logger.info('queue name %s, message count %d'%(one.name, one.qsize()))
+                out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
+            if task['taskid'] == 'on_start':
+                task['schedule']['queue_name'] = out_queue.name
+            if task['taskid'] == '_on_cronjob':
+                task['schedule'] = {'queue_name': out_queue.name}
+            logger.info("task into queque , queue's name is %s"%(out_queue.name))
+            out_queue.put_nowait(task)
+            # self.out_queue.put_nowait(task)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
         except Queue.Full:
@@ -501,6 +513,12 @@ class Scheduler(object):
         'page_num'
     ]
 
+    def _out_queue_full(self):
+        for queue in self.out_queues:
+            if queue.full():
+                return True
+        return False
+
     def _check_select(self):
         '''Select task to fetch & process'''
         while self._send_buffer:
@@ -512,7 +530,7 @@ class Scheduler(object):
                 self._send_buffer.append(_task)
                 break
 
-        if self.out_queue.full():
+        if self._out_queue_full():
             return {}
 
         taskids = []
