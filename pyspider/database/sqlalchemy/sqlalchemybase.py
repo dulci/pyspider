@@ -12,7 +12,7 @@ logger = logging.getLogger('database')
 def result2dict(columns, task):
     r = {}
     for key in task.keys():
-        logger.info("key is %s"%(key))
+        logger.info("key is %s, type is %s"%(key, type(task[key])))
         r[key] = task[key]
     return r
 
