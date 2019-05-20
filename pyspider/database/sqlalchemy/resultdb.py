@@ -314,6 +314,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             return self._parse(result2dict(columns, task))
 
     def get_content(self, project, taskid, fields={'taskid', 'project', 'url'}, table_name='crawler_content_result_record'):
+        time.sleep(0.1)
         self.table.name = self._tablename(table_name)
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
         for task in self.engine.execute(self.table.select()
