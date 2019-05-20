@@ -27,7 +27,7 @@ def process():
     limit = int(request.args.get('limit', 20))
 
     count = processdb.count(project, group, taskid=taskid, url=url, status=status, type=type)
-    results = list(processdb.select(project, group, taskid=taskid, url=url, status=status, type=type, offset=offset, limit=limit))
+    results = list(processdb.select(project, taskid, group=group, url=url, status=status, type=type, offset=offset, limit=limit))
     common_fields = ('status', 'fetch', 'process', 'scheduler', 'fetcher', 'processor','result_worker')
 
     return render_template(
