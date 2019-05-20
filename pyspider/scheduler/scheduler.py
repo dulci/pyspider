@@ -634,9 +634,9 @@ class Scheduler(object):
     def _load_put_task(self, project, taskid):
         try:
             task = self.taskdb.get_task(project, taskid, fields=self.request_task_fields)
-            if task.get('page_num') == None:
+            if task is not None and task.get('page_num') == None:
                 task['page_num'] = 0
-            if task.get('skip_fetcher') == None:
+            if task is not None and task.get('skip_fetcher') == None:
                 task['skip_fetcher'] == False
         except ValueError:
             logger.error('bad task pack %s:%s', project, taskid)
