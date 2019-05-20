@@ -97,6 +97,7 @@ def connect_rpc(ctx, param, value):
 @click.option('--data-path', default='./data', help='data dir path')
 @click.option('--add-sys-path/--not-add-sys-path', default=True, is_flag=True,
               help='add current working directory to python lib search path')
+@click.option('--fetcher-queue-names', default=['scheduler2fetcher'], help='scheduler2fetcher add this param suffix')
 @click.version_option(version=pyspider.__version__, prog_name=pyspider.__name__)
 @click.pass_context
 def cli(ctx, **kwargs):
@@ -154,9 +155,11 @@ def cli(ctx, **kwargs):
                                    ":%(RABBITMQ_PORT_5672_TCP_PORT)s/%%2F" % os.environ)
     elif kwargs.get('beanstalk'):
         kwargs['message_queue'] = "beanstalk://%s/" % kwargs['beanstalk']
-
-    for name in ('newtask_queue', 'status_queue', 'scheduler2fetcher',
-                 'fetcher2processor', 'processor2result', 'content_queue'):
+    queue_name = ['newtask_queue', 'status_queue', 'fetcher2processor', 'processor2result', 'content_queue']
+    queue_name.extend(kwargs.get('fetcher_queue_names'))
+    # for name in ('newtask_queue', 'status_queue', 'scheduler2fetcher',
+    #              'fetcher2processor', 'processor2result', 'content_queue'):
+    for name in queue_name:
         if kwargs.get('message_queue'):
             kwargs[name] = utils.Get(lambda name=name: connect_message_queue(
                 name, kwargs.get('message_queue'), kwargs['queue_maxsize']))
@@ -204,7 +207,7 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
     Scheduler = load_cls(None, None, scheduler_cls)
     kwargs = dict(taskdb=g.taskdb, projectdb=g.projectdb, projectcache=g.projectcache, resultdb=g.resultdb, processdb=g.processdb,
                   newtask_queue=g.newtask_queue, status_queue=g.status_queue,
-                  out_queue=g.scheduler2fetcher, data_path=g.get('data_path', 'data'))
+                  out_queues=[getattr(g, x) for x in g.fetcher_queue_names], data_path=g.get('data_path', 'data'))
     if threads:
         kwargs['threads'] = int(threads)
         print ('scheduler is running in ' + str(kwargs['threads']) + ' threads.')
@@ -235,11 +238,12 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
 @click.option('--timeout', help='default fetch timeout')
 @click.option('--phantomjs-endpoint', help="endpoint of phantomjs, start via pyspider phantomjs")
 @click.option('--splash-endpoint', help="execute endpoint of splash: http://splash.readthedocs.io/en/stable/api.html#execute")
+@click.option('--fetcher-name', default='scheduler2fetcher', help="names for monitor queue name")
 @click.option('--fetcher-cls', default='pyspider.fetcher.Fetcher', callback=load_cls,
               help='Fetcher class to be used.')
 @click.pass_context
 def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
-            timeout, phantomjs_endpoint, splash_endpoint, fetcher_cls,
+            timeout, phantomjs_endpoint, splash_endpoint, fetcher_name, fetcher_cls,
             async_mode=True, get_object=False, no_input=False):
     """
     Run Fetcher.
@@ -251,7 +255,8 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
         inqueue = None
         outqueue = None
     else:
-        inqueue = g.scheduler2fetcher
+        # inqueue = g.scheduler2fetcher
+        inqueue = getattr(g, fetcher_name)
         outqueue = g.fetcher2processor
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
                       poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=g.processdb)
@@ -363,8 +368,10 @@ def webui(ctx, host, port, cdn, scheduler_rpc, fetcher_rpc, max_rate, max_burst,
     app.config['process_time_limit'] = process_time_limit
 
     # inject queues for webui
-    for name in ('newtask_queue', 'status_queue', 'scheduler2fetcher',
-                 'fetcher2processor', 'processor2result'):
+    names = ['newtask_queue', 'status_queue',
+                 'fetcher2processor', 'processor2result']
+    names.extend(g.fetcher_queue_names)
+    for name in names:
         app.config['queues'][name] = getattr(g, name, None)
 
     # fetcher rpc
@@ -563,7 +570,8 @@ def bench(ctx, fetcher_num, processor_num, result_worker_num, run_in, total, sho
         bench.bench_test_taskdb(g.taskdb)
     # test message queue
     if all_test or message_queue_bench:
-        bench.bench_test_message_queue(g.scheduler2fetcher)
+        # bench.bench_test_message_queue(g.scheduler2fetcher)
+        bench.bench_test_message_queue(getattr(g, g.fetcher_queue_names[0])) #fetcher 监控的队列改为队列集合，此处如果使用请自行修改
     # test all
     if not all_test and not all_bench:
         return

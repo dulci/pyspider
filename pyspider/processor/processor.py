@@ -176,6 +176,10 @@ class Processor(object):
         # it's used here for performance.
         if ret.follows:
             for each in (ret.follows[x:x + 1000] for x in range(0, len(ret.follows), 1000)):
+                if task.get('schedule', {}).get('queue_name'):
+                    for one in each:
+                        if one.get('fetch',{}).get('fetch_type') and one.get('fetch',{}).get('fetch_type') == 'webdriver':
+                            one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
                 self.newtask_queue.put([utils.unicode_obj(newtask) for newtask in each])
 
         for project, msg, url in ret.messages:
