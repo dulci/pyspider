@@ -126,9 +126,6 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             tablename = "crawler_content_result_record"
         else:
             tablename = "crawler_result_record"
-        if tablename not in self.projects:
-            self._create_project(project)
-            self._list_project()
         self.table.name = self._tablename(tablename)
         obj = {
             'project': project,
@@ -316,15 +313,15 @@ class ResultDB(SplitTableMixin, BaseResultDB):
                                         .limit(1)):
             return self._parse(result2dict(columns, task))
 
-    def get_content(self, project, taskid, fields=None, table_name='crawler_content_result_record'):
+    def get_content(self, project, taskid, fields={'taskid', 'project', 'url'}, table_name='crawler_content_result_record'):
+        time.sleep(0.2)
         self.table.name = self._tablename(table_name)
-
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
         for task in self.engine.execute(self.table.select()
-                                                .with_only_columns(columns=columns)
-                                                .where(
-            and_(self.table.c.taskid == taskid, self.table.c.project == project))
-                                                .limit(1)):
+                                            .with_only_columns(columns=columns)
+                                            .where(
+                                            and_(self.table.c.taskid == taskid,
+                                            self.table.c.project == project))):
             return self._parse(result2dict(columns, task))
 
     def clean(self, project, group):

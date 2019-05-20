@@ -84,7 +84,7 @@ class Fetcher(object):
         },
         'use_gzip': True,
         'timeout': 60,
-        'connect_timeout': 30,
+        'connect_timeout': 70,
     }
     phantomjs_proxy = None
     splash_endpoint = None
@@ -342,7 +342,7 @@ class Fetcher(object):
             robot_txt = RobotFileParser()
             try:
                 response = yield gen.maybe_future(self.http_client.fetch(
-                    urljoin(url, '/robots.txt'), connect_timeout=30, request_timeout=60))
+                    urljoin(url, '/robots.txt'), connect_timeout=70, request_timeout=60))
                 content = response.body
             except tornado.httpclient.HTTPError as e:
                 logger.error('load robots.txt from %s error: %r', domain, e)
@@ -675,7 +675,7 @@ class Fetcher(object):
         request_conf = {
             'follow_redirects': False
         }
-        request_conf['connect_timeout'] = fetch.get('connect_timeout', 30)
+        request_conf['connect_timeout'] = fetch.get('connect_timeout', 70)
         request_conf['request_timeout'] = fetch.get('request_timeout', 60) + 1
 
         session = cookies.RequestsCookieJar()
@@ -790,7 +790,7 @@ class Fetcher(object):
                 'Content-Type': 'application/json',
             }
         }
-        request_conf['connect_timeout'] = fetch.get('connect_timeout', 30)
+        request_conf['connect_timeout'] = fetch.get('connect_timeout', 70)
         request_conf['request_timeout'] = fetch.get('request_timeout', 60) + 1
 
         session = cookies.RequestsCookieJar()

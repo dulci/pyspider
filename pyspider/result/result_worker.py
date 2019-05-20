@@ -87,6 +87,9 @@ class ResultWorker(object):
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=32)
                 return res
             except Exception as e:
+                print(task)
+                print(result)
+                logger.exception(e)
                 if self.processdb is not None:
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=35)
                 logger.warning('result svae failure -> %.30r' % e)
