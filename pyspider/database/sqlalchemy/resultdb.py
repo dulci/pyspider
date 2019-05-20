@@ -122,7 +122,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         return data
 
     def save(self, project, taskid, url, result, group=None):
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             tablename = "crawler_content_result_record"
         else:
             tablename = "crawler_result_record"
