@@ -317,12 +317,15 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         time.sleep(0.2)
         self.table.name = self._tablename(table_name)
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
-        for task in self.engine.execute(self.table.select()
-                                            .with_only_columns(columns=columns)
-                                            .where(
-                                            and_(self.table.c.taskid == taskid,
-                                            self.table.c.project == project))):
-            return self._parse(result2dict(columns, task))
+        try:
+            for task in self.engine.execute(self.table.select()
+                                                .with_only_columns(columns=columns)
+                                                .where(
+                                                and_(self.table.c.taskid == taskid,
+                                                self.table.c.project == project))):
+                return self._parse(result2dict(columns, task))
+        except:
+            return None
 
     def clean(self, project, group):
         if group == 'self_crawler':
