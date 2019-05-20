@@ -383,8 +383,8 @@ class Scheduler(object):
             if task.get('schedule', {}).get('queue_name'):
                 out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
             else:
-                for one in self.out_queues:
-                    logger.info('queue name %s, message count %d'%(one.name, one.qsize()))
+                #for one in self.out_queues:
+                    #logger.info('queue name %s, message count %d'%(one.name, one.qsize()))
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
             if task['taskid'] == 'on_start':
                 task['schedule']['queue_name'] = out_queue.name
