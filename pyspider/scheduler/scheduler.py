@@ -755,6 +755,7 @@ class Scheduler(object):
             except Exception as e:
                 logger.exception(e)
                 self._exceptions += 1
+                logger.error("cheduler current exception times :%s"%(self._exceptions))
                 if self._exceptions > self.EXCEPTION_LIMIT:
                     logger.error("cheduler exception times exceed setup limitation num")
                     break
