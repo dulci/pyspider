@@ -445,6 +445,7 @@ class Scheduler(object):
         tasks = {}
         while len(tasks) < self.LOOP_LIMIT:
             try:
+                time.sleep(0.1)
                 task = self.newtask_queue.get_nowait()
             except Queue.Empty:
                 break
