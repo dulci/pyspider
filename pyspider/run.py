@@ -211,9 +211,9 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
                   out_queues=[getattr(g, x) for x in g.fetcher_queue_names], data_path=g.get('data_path', 'data'))
     if threads:
         kwargs['threads'] = int(threads)
-        print ('scheduler is running in ' + str(kwargs['threads']) + ' threads.')
+        logging.info('scheduler is running in %s threads', str(kwargs['threads']))
 
-    print ('scheduler is running in loop_interval: ' + str(loop_interval))
+    logging.info('scheduler is running in loop_interval: %s', str(loop_interval))
     scheduler = Scheduler(**kwargs)
     scheduler.INQUEUE_LIMIT = inqueue_limit
     scheduler.DELETE_TIME = delete_time
