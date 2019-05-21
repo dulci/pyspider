@@ -745,8 +745,11 @@ class Scheduler(object):
         '''Start scheduler loop'''
         logger.info("scheduler starting...")
 
+        loop_times = 0;
         while not self._quit:
+            loop_times += 1
             try:
+                logger.debug("scheduler begin loop, current loop times: %s"%(loop_times))
                 time.sleep(self.LOOP_INTERVAL)
                 self.run_once()
                 self._exceptions = 0
