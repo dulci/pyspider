@@ -365,7 +365,6 @@ class Scheduler(object):
         )
 
     def send_task(self, task, force=True):
-        time.sleep(0.1)
         '''
         dispatch task to fetcher
 
@@ -459,7 +458,6 @@ class Scheduler(object):
         logger.debug("scheduler begin get new request task")
         while len(tasks) < self.LOOP_LIMIT:
             try:
-                time.sleep(0.1)
                 task = self.newtask_queue.get_nowait()
             except Queue.Empty:
                 break
@@ -1139,7 +1137,6 @@ class Scheduler(object):
             return task
 
     def on_select_task(self, task):
-        time.sleep(0.1)
         '''Called when a task is selected to fetch & process'''
         # inject informations about project
         logger.info('select %(project)s:%(taskid)s %(url)s', task)
