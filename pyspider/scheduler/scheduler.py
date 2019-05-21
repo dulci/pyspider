@@ -365,6 +365,7 @@ class Scheduler(object):
         )
 
     def send_task(self, task, force=True):
+        time.sleep(0.1)
         '''
         dispatch task to fetcher
 
