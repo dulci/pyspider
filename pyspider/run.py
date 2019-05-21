@@ -213,7 +213,7 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
         kwargs['threads'] = int(threads)
         print ('scheduler is running in ' + str(kwargs['threads']) + ' threads.')
 
-    print ('scheduler is running in loop_interval: ' + loop_interval)
+    print ('scheduler is running in loop_interval: ' + str(loop_interval))
     scheduler = Scheduler(**kwargs)
     scheduler.INQUEUE_LIMIT = inqueue_limit
     scheduler.DELETE_TIME = delete_time
