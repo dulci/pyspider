@@ -216,14 +216,13 @@ class Scheduler(object):
             return
         logger.debug("scheduler check update time has arrived")
         projects = self.projectdb.check_update(self._last_update_project)
-        logger.debug("scheduler projects num: %s"%(len(projects)))
         index = 0
         logger.debug("scheduler projects begin the loop of update")
         for project in projects:
             index += 1
             self._update_project(project)
             if index % 100 == 0:
-                logger.debug("project: %s updated. %s/%s", project['name'], index, len(projects))
+                logger.debug("project: %s updated. current projects: %s", project['name'], index)
             # if self.projectcache:
             #     self.projectcache.set_project_delay_level(project['name'], 0)
         logger.debug("scheduler projects end the loop of update")
