@@ -193,7 +193,12 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
 
     def count(self, project, group, taskid=None, url=None, status=None, type=None):
         self.table.name = self.__tablename__
-        whl_con = and_(self.table.c.project == project, self.table.c.group == group)
+        whl_con = and_('1' == '1')
+        if project:
+            whl_con = and_(whl_con, self.table.c.project == project)
+        if group:
+            whl_con = and_(whl_con,self.table.c.group == group)
+        # whl_con = and_(self.table.c.project == project, self.table.c.group == group)
         if taskid is not None and taskid != '':
             whl_con = and_(whl_con, self.table.c.taskid == taskid)
         if url is not None and url != '':

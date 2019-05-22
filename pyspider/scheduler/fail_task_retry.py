@@ -17,7 +17,9 @@ class FailTaskRetry(object):
         logger.info("scavenger starting...")
         while True:
             self.retry_fail_task()
+            logger.info('retry failed task once')
             time.sleep(self.RETRY_FAIL_TASK_INTERVAL)
+
     def retry_fail_task(self):
         if self._last_retry_fail_task_time and self._last_retry_fail_task_time + self.RETRY_FAIL_TASK_INTERVAL > time.time():
             return
@@ -28,8 +30,8 @@ class FailTaskRetry(object):
             fail_count = self.processdb.count(None, group, status=fail_status, type=3)
             pages = math.ceil(fail_count/limit)
             for page in range(pages):
-                out_queue = sorted(self.out_queues, key=lambda x: x.qsize())[0]
-                fail_task_results = list(self.processdb.select(project, group, taskid='', url='', status=fail_status, type=3, limit=limit, offset=page*limit))
+                out_queue = sorted(self.queues, key=lambda x: x.qsize())[0]
+                fail_task_results = list(self.processdb.select(None, None, group=group, url='', status=fail_status, type=3, limit=limit, offset=page*limit))
                 for fail_task in fail_task_results:
                     task = self._put_fail_task_agin(fail_task)
                     out_queue.put(task)
@@ -37,8 +39,8 @@ class FailTaskRetry(object):
             suspected_fail_count = self.processdb.count(None, group, status=suspected_fail_status, type=3)
             pages = math.ceil(suspected_fail_count/limit)
             for page in range(pages):
-                out_queue = sorted(self.out_queues, key=lambda x: x.qsize())[0]
-                suspected_fail_results = list(self.processdb.select(None, group, taskid='', url='', status=suspected_fail_status, type=3, limit=limit, offset=page*limit))
+                out_queue = sorted(self.queues, key=lambda x: x.qsize())[0]
+                suspected_fail_results = list(self.processdb.select(None, None, group=group, url='', status=suspected_fail_status, type=3, limit=limit, offset=page*limit))
                 for suspected_fail_task in suspected_fail_results:
                     task = self._put_fail_task_agin(suspected_fail_task)
                     if task:
@@ -48,13 +50,15 @@ class FailTaskRetry(object):
 
     def _put_fail_task_agin(self, source_task, reset_keys=['taskid','url','project','fetch','process','group']):
         task = dict()
-        if source_task['status'] == 1 and (source_task['updated_at'] - source_task['created_at']) < 600:
-            return
-        if source_task['status'] == 11 and (time.time() - source_task['fetcher_begin_time']) < 600:
-            return
-        if source_task['status'] == 21 and (time.time() - source_task['processor_begin_time']) < 600:
-            return
-        if source_task['status'] == 31 and (time.time() - source_task['result_worder_begin_time']) < 600:
+        # if source_task['status'] == 1 and (time.mktime(source_task['updated_at'].timetuple()) - time.mktime(source_task['created_at'].timetuple())) < 600:
+        #     return
+        # if source_task['status'] == 11 and (time.time() - time.mktime(source_task['fetcher_begin_time'].timetuple())) < 600:
+        #     return
+        # if source_task['status'] == 21 and (time.time() - time.mktime(source_task['processor_begin_time'].timetuple())) < 600:
+        #     return
+        # if source_task['status'] == 31 and (time.time() - time.mktime(source_task['result_worder_begin_time'].timetuple())) < 600:
+        #     return
+        if (time.time() - time.mktime(source_task['scheduler_created_time'].timetuple())) < 600:
             return
         for key in reset_keys:
             task[key] = source_task.get(key)
