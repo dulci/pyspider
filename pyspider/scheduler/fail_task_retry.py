@@ -28,6 +28,7 @@ class FailTaskRetry(object):
         limit = 1000
         for group in self.groups:
             fail_count = self.processdb.count(None, group, status=fail_status, type=3)
+            logger.info('fail task num is %d'%(fail_count))
             pages = math.ceil(fail_count/limit)
             for page in range(pages):
                 out_queue = sorted(self.queues, key=lambda x: x.qsize())[0]
@@ -37,6 +38,7 @@ class FailTaskRetry(object):
                     out_queue.put(task)
                     logger.info('fail task:%s:%s is restart' % (task['project'], task['taskid']))
             suspected_fail_count = self.processdb.count(None, group, status=suspected_fail_status, type=3)
+            logger.info('suspected fail task num is %d' % (suspected_fail_count))
             pages = math.ceil(suspected_fail_count/limit)
             for page in range(pages):
                 out_queue = sorted(self.queues, key=lambda x: x.qsize())[0]
