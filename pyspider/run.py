@@ -193,13 +193,14 @@ def cli(ctx, **kwargs):
 @click.option('--active-tasks', default=100, help='active log size')
 @click.option('--loop-limit', default=1000, help='maximum number of tasks due with in a loop')
 @click.option('--fail-pause-num', default=10, help='auto pause the project when last FAIL_PAUSE_NUM task failed, set 0 to disable')
+@click.option('--loop-interval', default=0.1, help='the interval between two loops of scheduler')
 @click.option('--scheduler-cls', default='pyspider.scheduler.ThreadBaseScheduler', callback=load_cls,
               help='scheduler class to be used.')
 @click.option('--threads', default=None, help='thread number for ThreadBaseScheduler, default: 4')
 @click.pass_context
 def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
               inqueue_limit, delete_time, active_tasks, loop_limit, fail_pause_num,
-              scheduler_cls, threads, get_object=False):
+              scheduler_cls, threads, get_object=False, loop_interval=0.1):
     """
     Run Scheduler, only one scheduler is allowed.
     """
@@ -210,14 +211,16 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
                   out_queues=[getattr(g, x) for x in g.fetcher_queue_names], data_path=g.get('data_path', 'data'))
     if threads:
         kwargs['threads'] = int(threads)
-        print ('scheduler is running in ' + str(kwargs['threads']) + ' threads.')
+        logging.info('scheduler is running in %s threads', str(kwargs['threads']))
 
+    logging.info('scheduler is running in loop_interval: %s', str(loop_interval))
     scheduler = Scheduler(**kwargs)
     scheduler.INQUEUE_LIMIT = inqueue_limit
     scheduler.DELETE_TIME = delete_time
     scheduler.ACTIVE_TASKS = active_tasks
     scheduler.LOOP_LIMIT = loop_limit
     scheduler.FAIL_PAUSE_NUM = fail_pause_num
+    scheduler.LOOP_INTERVAL = loop_interval
 
     g.instances.append(scheduler)
     if g.get('testing_mode') or get_object:
