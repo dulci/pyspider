@@ -227,6 +227,18 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
         utils.run_in_thread(scheduler.xmlrpc_run, port=xmlrpc_port, bind=xmlrpc_host)
     scheduler.run()
 
+@cli.command()
+@click.option('--scavenger-cls', default='pyspider.scheduler.FailTaskRetry', callback=load_cls,
+              help='FailTaskRetry class to be used.')
+@click.pass_context
+def scavenger(ctx, scavenger_cls, get_object=False):
+    g = ctx.obj
+    FailTaskRetry = load_cls(None, None, scavenger_cls)
+    scavenger = FailTaskRetry(processdb=g.processdb, queues=[getattr(g, x) for x in g.fetcher_queue_names])
+    g.instances.append(scavenger)
+    if g.get('testing_mode') or get_object:
+        return scavenger
+    scavenger.run()
 
 @cli.command()
 @click.option('--xmlrpc/--no-xmlrpc', default=False)
@@ -492,6 +504,10 @@ def all(ctx, fetcher_num, processor_num, result_worker_num, run_in):
         result_worker_config = g.config.get('result_worker', {})
         for i in range(result_worker_num):
             threads.append(run_in(ctx.invoke, result_worker, **result_worker_config))
+
+        #scavenger
+        scavenger_config = g.config.get('scavenger', {})
+        threads.append(run_in(ctx.invoke, scavenger, **scavenger_config))
 
         # processor
         processor_config = g.config.get('processor', {})
