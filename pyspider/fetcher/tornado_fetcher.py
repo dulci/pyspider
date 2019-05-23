@@ -553,7 +553,7 @@ class Fetcher(object):
         handle_error = lambda x: self.handle_error('http', url, task, start_time, x)
         try:
             if url is not None and (not task.get('fetch', {}).get('css_selector') and not task.get('fetch', {}).get('xpath_selector')):
-                driver = self.drivers.get_driver(task.get('project'), True)
+                driver = self.drivers.get_driver(task.get('project'), True,  task.get('fetch', {}).get('load_img'))
                 driver.get(url)
                 if task.get('fetch', {}).get('wait_for_xpath'):
                     WebDriverWait(driver, 10, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('wait_for_xpath'))))
