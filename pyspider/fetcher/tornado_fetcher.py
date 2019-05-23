@@ -554,6 +554,7 @@ class Fetcher(object):
         try:
             if url is not None and (not task.get('fetch', {}).get('css_selector') and not task.get('fetch', {}).get('xpath_selector')):
                 driver = self.drivers.get_driver(task.get('project'), True,  task.get('fetch', {}).get('load_img'))
+                logger.warning("webdriver is %s", driver)
                 try:
                     driver.get(url)
                 except WebDriverException:
