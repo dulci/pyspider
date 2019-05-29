@@ -402,7 +402,9 @@ class Scheduler(object):
                 task['schedule'] = {'queue_name': out_queue.name}
             if task['taskid'] == '_on_get_info':
                 task['schedule'] = {'queue_name': out_queue.name}
-            logger.debug("task into queque , queue's name is %s"%(out_queue.name))
+            if task['taskid'] == 'on_start' or task['taskid'] == '_on_cronjob' or task['taskid'] == '_on_get_info':
+                logger.debug("begin task %s to queue %s"%(task['project'], task.get("schedule", {}).get('queue_name')))
+            logger.debug("task %s into queque , queue's name is %s"%(task['project'], out_queue.name))
             out_queue.put_nowait(task)
             # self.out_queue.put_nowait(task)
             if self.processdb is not None:
