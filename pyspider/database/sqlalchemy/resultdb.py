@@ -279,7 +279,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             return count
 
     def count(self, project, group, taskid=None, url=None, upload_status=None):
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             tablename = "crawler_content_result_record"
         elif group == 'completion_delay_monitoring':
             tablename = "crawler_result_record"
