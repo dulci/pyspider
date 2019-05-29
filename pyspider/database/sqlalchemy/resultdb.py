@@ -144,7 +144,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         #     db_result = self.engine.execute(self.table.insert()
         #                                .values(**self._stringify(obj)))
         db_result = self._save(tablename, taskid, obj)
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             return db_result
         else:
             group_name = str(group).strip()
@@ -244,7 +244,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             yield self._parse(result2dict(columns, task))
 
     def select(self, project, group, taskid=None, url=None, upload_status=None, fields=None, offset=0, limit=None):
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             tablename = "crawler_content_result_record"
         elif group == 'completion_delay_monitoring':
             tablename = "crawler_result_record"
@@ -327,7 +327,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             return None
 
     def clean(self, project, group):
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             self.table.name = "crawler_content_result_record"
             return self.engine.execute(self.table.delete()
                                        .where(self.table.c.project == project))
