@@ -272,6 +272,7 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
     else:
         # inqueue = g.scheduler2fetcher
         inqueue = getattr(g, fetcher_name)
+        logging.info('fetcher monitor the queue name: %s', getattr(g, fetcher_name).name)
         outqueue = g.fetcher2processor
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
                       poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=g.processdb)

@@ -389,15 +389,16 @@ class Scheduler(object):
 
         try:
             if task.get('fetch', {}).get('fetch_type') ==  'webdriver':
-                logger.debug("%s webdriver task's schedule queue name is %s"%(task['project'], task.get("schedule", {}).get('queue_name')))
-                logger.debug("%s webdriver task's out_queue is %s"%(task['project'], task.get("schedule", {}).get('queue_name')))
+                logger.debug("%s:%s webdriver task's schedule queue name is %s"%(task['project'], task['taskid'], task.get("schedule", {}).get('queue_name')))
+                logger.debug("%s:%s webdriver task's out_queue is %s"%(task['project'], task['taskid'], task.get("schedule", {}).get('queue_name')))
 
             if task.get('schedule', {}).get('queue_name'):
                 out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
             else:
-                #for one in self.out_queues:
-                    #logger.info('queue name %s, message count %d'%(one.name, one.qsize()))
+                for one in self.out_queues:
+                    logger.debug('queue name %s, message count %d'%(one.name, one.qsize()))
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
+                logger.debug('choice queue\'s name is %s' % (out_queue.name))
 
             if task['taskid'] == 'on_start':
                 task['schedule']['queue_name'] = out_queue.name
