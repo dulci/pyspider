@@ -179,7 +179,10 @@ class Processor(object):
                 if task.get('schedule', {}).get('queue_name'):
                     for one in each:
                         if one.get('fetch',{}).get('fetch_type') and one.get('fetch',{}).get('fetch_type') == 'webdriver':
-                            one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
+                            if one.get('schedule'):
+                                one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
+                            else:
+                                one['schedule'] = {'queue_name': task.get('schedule', {}).get('queue_name')}
                 self.newtask_queue.put([utils.unicode_obj(newtask) for newtask in each])
 
         for project, msg, url in ret.messages:
