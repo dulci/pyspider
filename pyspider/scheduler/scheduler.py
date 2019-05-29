@@ -398,6 +398,8 @@ class Scheduler(object):
                 task['schedule']['queue_name'] = out_queue.name
             if task['taskid'] == '_on_cronjob':
                 task['schedule'] = {'queue_name': out_queue.name}
+            if task['taskid'] == '_on_get_info':
+                task['schedule'] = {'queue_name': out_queue.name}
             logger.debug("task into queque , queue's name is %s"%(out_queue.name))
             out_queue.put_nowait(task)
             # self.out_queue.put_nowait(task)

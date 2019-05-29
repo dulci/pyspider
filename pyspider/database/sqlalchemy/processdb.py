@@ -144,7 +144,7 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
         elif str(process).find('index_page') != -1:
             obj['type'] = 2
         else:
-            obj['type'] = 3
+            obj['type'] = 9#过程页
         if fetch is not None:
             obj['fetch'] = fetch
         obj['url'] = url
