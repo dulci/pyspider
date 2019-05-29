@@ -395,7 +395,7 @@ class Scheduler(object):
                     #logger.info('queue name %s, message count %d'%(one.name, one.qsize()))
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
             if task.get('fetch', {}).get('fetch_type') ==  'webdriver':
-                logger.debug("webdriver task's out_queue is %s"%(task.get("schedule", {}).get('queue_name')))
+                logger.debug("%s webdriver task's out_queue is %s"%(task['project'], task.get("schedule", {}).get('queue_name')))
             if task['taskid'] == 'on_start':
                 task['schedule']['queue_name'] = out_queue.name
             if task['taskid'] == '_on_cronjob':
