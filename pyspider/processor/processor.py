@@ -234,6 +234,7 @@ class Processor(object):
         while not self._quit:
             try:
                 task, response = self.inqueue.get(timeout=1)
+                logger.debug("processer start task is %s"%(task))
                 if self.processdb is not None:
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=21)
                 self.on_task(task, response)
