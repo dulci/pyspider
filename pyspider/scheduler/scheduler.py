@@ -390,6 +390,8 @@ class Scheduler(object):
         try:
 
             if task.get('schedule', {}).get('queue_name'):
+                logger.debug("queue_name is %s"%(task['schedule']['queue_name']))
+                logger.debug("queues_name is %s"%(','.join([x.name for x in self.out_queues])))
                 out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
             else:
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
