@@ -178,12 +178,21 @@ class Processor(object):
             for each in (ret.follows[x:x + 1000] for x in range(0, len(ret.follows), 1000)):
                 if task.get('schedule', {}).get('queue_name'):
                     for one in each:
-                        if one.get('fetch',{}).get('fetch_type') and one.get('fetch',{}).get('fetch_type') == 'webdriver':
-                            if one.get('schedule'):
-                                one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
-                            else:
-                                one['schedule'] = {'queue_name': task.get('schedule', {}).get('queue_name')}
-                            logger.debug("processer webdriver task is %s:%s, queue name is %s"%(task['project'], task['taskid'], one['schedule']['queue_name']))
+                        # if one.get('fetch',{}).get('fetch_type') and one.get('fetch',{}).get('fetch_type') == 'webdriver':
+                        #     if one.get('schedule'):
+                        #         one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
+                        #     else:
+                        #         one['schedule'] = {'queue_name': task.get('schedule', {}).get('queue_name')}
+                        #     logger.debug("processer webdriver task is %s:%s, queue name is %s"%(task['project'], task['taskid'], one['schedule']['queue_name']))
+                        #     logger.debug("processer new webdriver task is %s:%s, queue name is %s" % (one['project'], one['taskid'], one['schedule']['queue_name']))
+                        if one.get('schedule'):
+                            one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
+                        else:
+                            one['schedule'] = {'queue_name': task.get('schedule', {}).get('queue_name')}
+                        logger.debug("processer webdriver task is %s:%s, queue name is %s" % (task['project'], task['taskid'], one['schedule']['queue_name']))
+                        logger.debug("processer new webdriver task is %s:%s, queue name is %s" % (one['project'], one['taskid'], one['schedule']['queue_name']))
+                for one in each:
+                    logger.debug('task %s child task is %s'%(task, one))
                 self.newtask_queue.put([utils.unicode_obj(newtask) for newtask in each])
 
         for project, msg, url in ret.messages:
