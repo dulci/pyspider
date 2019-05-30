@@ -185,7 +185,7 @@ class Processor(object):
                         else:
                             one['schedule'] = {'queue_name': task.get('schedule', {}).get('queue_name')}
                 for one in each:
-                    logger.debug("processor child task is %s:%s, queue name is %s" % (one['project'], one['taskid'], one['schedule']['queue_name']))
+                    logger.debug("processor child task is %s:%s, queue name is %s" % (one['project'], one['taskid'], one.get('schedule', {}).get('queue_name')))
                 self.newtask_queue.put([utils.unicode_obj(newtask) for newtask in each])
 
         for project, msg, url in ret.messages:
