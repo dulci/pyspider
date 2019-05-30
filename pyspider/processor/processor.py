@@ -183,6 +183,7 @@ class Processor(object):
                                 one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
                             else:
                                 one['schedule'] = {'queue_name': task.get('schedule', {}).get('queue_name')}
+                            logger.debug("processer webdriver task is %s:%s, queue name is %s"%(task['project'], task['taskid'], one['schedule']['queue_name']))
                 self.newtask_queue.put([utils.unicode_obj(newtask) for newtask in each])
 
         for project, msg, url in ret.messages:

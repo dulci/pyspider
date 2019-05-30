@@ -162,6 +162,7 @@ class Fetcher(object):
                 result = yield self.splash_fetch(url, task)
             elif task.get('fetch', {}).get('fetch_type') in ('webdriver', ):
                 type = 'webdriver'
+                logger.debug("fetcher webdriver task is %s:%s, queue name is %s"%(task['project'], task['taskid'], task['schedule']['queue_name']))
                 result = yield self.webdriver_fetch(url, task)
             elif task.get('fetch', {}).get('fetch_type') in ('chrome', 'ch'):
                 type = 'chrome'
