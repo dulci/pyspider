@@ -388,20 +388,18 @@ class Scheduler(object):
                 return
 
         try:
-            logger.debug( "task %s:%s, fetch_type is %s, queue_name is %s" % (task['project'], task['taskid'], task.get('fetch',{}).get('fetch_type'), task.get('schedule', {}).get('queue_name')))
+
             if task.get('schedule', {}).get('queue_name'):
                 out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
             else:
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
-                if task['taskid'] == 'on_start':
+                if task.get('schedule'):
                     task['schedule']['queue_name'] = out_queue.name
-                if task['taskid'] == '_on_cronjob':
+                else:
                     task['schedule'] = {'queue_name': out_queue.name}
-                if task['taskid'] == '_on_get_info':
-                    task['schedule'] = {'queue_name': out_queue.name}
-            logger.debug("task %s:%s into queque , queue's name is %s"% (task['project'], task['taskid'], out_queue.name))
+            if task.get('fetch', {}).get('fetch_type') == 'webdrivver':
+                logger.debug("webdriver_task task %s:%s, queue_name is %s" % (task['project'], task['taskid'],task.get('schedule', {}).get('queue_name')))
             out_queue.put_nowait(task)
-            # self.out_queue.put_nowait(task)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
         except Queue.Full:
