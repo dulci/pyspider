@@ -386,9 +386,7 @@ class Scheduler(object):
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
                 logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
                 return
-
         try:
-
             if task.get('schedule', {}).get('queue_name'):
                 logger.debug("queue_name is %s"%(task['schedule']['queue_name']))
                 logger.debug("queues_name is %s"%(','.join([x.name for x in self.out_queues])))
@@ -399,7 +397,7 @@ class Scheduler(object):
                     task['schedule']['queue_name'] = out_queue.name
                 else:
                     task['schedule'] = {'queue_name': out_queue.name}
-            if task.get('fetch', {}).get('fetch_type') == 'webdrivver':
+            if task.get('fetch', {}).get('fetch_type') == 'webdriver':
                 logger.debug("webdriver_task task %s:%s, queue_name is %s" % (task['project'], task['taskid'],task.get('schedule', {}).get('queue_name')))
             out_queue.put_nowait(task)
             if self.processdb is not None:
