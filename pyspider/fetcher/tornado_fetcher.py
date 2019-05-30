@@ -127,6 +127,7 @@ class Fetcher(object):
         '''Send fetch result to processor'''
         if self.outqueue:
             try:
+                logger.debug("fetcher is finish queue is %s task is %s"%(self.inqueue.name, task))
                 self.outqueue.put((task, result))
                 if self.processdb is not None:
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], fetcher_response_code=result['status_code'], status=12)
@@ -882,6 +883,7 @@ class Fetcher(object):
                     task = utils.decode_unicode_obj(task)
                     if self.processdb is not None:
                         self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=11)
+                    logger.debug('fetcher will be work from queue %s get one task %s'%(self.inqueue.name, task))
                     self.fetch(task)
                 except queue.Empty:
                     break
