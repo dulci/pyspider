@@ -165,7 +165,7 @@ class Fetcher(object):
                 result = yield self.splash_fetch(url, task)
             elif task.get('fetch', {}).get('fetch_type') in ('webdriver', ):
                 type = 'webdriver'
-                logger.debug("fetcher webdriver task is %s:%s, queue name is %s"%(task['project'], task['taskid'], task['schedule']['queue_name']))
+                logger.debug("fetcher webdriver task is %s:%s, queue name is %s"%(task['project'], task['taskid'], task.get('schedule', {}).get('queue_name')))
                 result = yield self.webdriver_fetch(url, task)
             elif task.get('fetch', {}).get('fetch_type') in ('chrome', 'ch'):
                 type = 'chrome'
@@ -615,7 +615,7 @@ class Fetcher(object):
                     "js_script_result": None,
                     "save": task.get('fetch', {}).get('save')
             }
-        except TimeoutException:
+        except TimeoutException as e:
             result = {
                     "orig_url": url,
                     "content": "load page is timeout",
@@ -627,7 +627,7 @@ class Fetcher(object):
                     "save": task.get('fetch', {}).get('save')
             }
             logger.warning("[504] webdriver timeout %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
-        except WebDriverException:
+        except WebDriverException as e:
             result = {
                 "orig_url": url,
                 "content": "webdriver not found",
@@ -639,6 +639,7 @@ class Fetcher(object):
                 "save": task.get('fetch', {}).get('save')
             }
             logger.warning("[500] webdriver not found %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            logger.debug("webdriver error:%s"%(e.msg))
             self.drivers.delete_driver(task.get('project'))
         result['configure'] = self.configure
         result['project_name'] = task.get('project')
