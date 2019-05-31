@@ -127,7 +127,9 @@ class Fetcher(object):
         '''Send fetch result to processor'''
         if self.outqueue:
             try:
+                logger.debug("==================================================================")
                 logger.debug("fetcher is finish queue is %s task is %s"%(self.inqueue.name, task))
+                logger.debug("result is %s"%(result))
                 self.outqueue.put((task, result))
                 if self.processdb is not None:
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], fetcher_response_code=result['status_code'], status=12)
