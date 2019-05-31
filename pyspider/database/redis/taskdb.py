@@ -50,7 +50,7 @@ class TaskDB(BaseTaskDB):
                     data[each] = json.loads(data[each])
                 else:
                     data[each] = {}
-        if 'status' in data:
+        if 'status' in data and data['status']:
             data['status'] = int(data['status'])
         if 'lastcrawltime' in data:
             data['lastcrawltime'] = float(data['lastcrawltime'] or 0)
