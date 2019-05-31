@@ -398,7 +398,7 @@ class Scheduler(object):
                 else:
                     task['schedule'] = {'queue_name': out_queue.name}
             if task.get('fetch', {}).get('fetch_type') == 'webdriver':
-                logger.debug("webdriver_task task %s:%s, queue_name is %s" % (task['project'], task['taskid'],task.get('schedule', {}).get('queue_name')))
+                logger.debug("webdriver_task task %s:%s:%s, queue_name is %s" % (task['project'], task['taskid'],task['url'],task.get('schedule', {}).get('queue_name')))
             out_queue.put_nowait(task)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
