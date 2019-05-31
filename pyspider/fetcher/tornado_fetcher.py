@@ -627,6 +627,7 @@ class Fetcher(object):
                     "save": task.get('fetch', {}).get('save')
             }
             logger.warning("[504] webdriver timeout %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            logger.warning("webdriver timeout error is %s"%(e.msg))
         except WebDriverException as e:
             result = {
                 "orig_url": url,
