@@ -174,7 +174,6 @@ class Processor(object):
 
         # FIXME: unicode_obj should used in scheduler before store to database
         # it's used here for performance.
-
         if ret.follows:
             for each in (ret.follows[x:x + 1000] for x in range(0, len(ret.follows), 1000)):
                 logger.debug("=================================================================")
