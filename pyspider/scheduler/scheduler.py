@@ -389,7 +389,6 @@ class Scheduler(object):
         try:
             if task.get('schedule', {}).get('queue_name'):
                 logger.debug("queue_name is %s"%(task['schedule']['queue_name']))
-                logger.debug("queues_name is %s"%(','.join([x.name for x in self.out_queues])))
                 out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
             else:
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
@@ -398,7 +397,8 @@ class Scheduler(object):
                 else:
                     task['schedule'] = {'queue_name': out_queue.name}
             if task.get('fetch', {}).get('fetch_type') == 'webdriver':
-                logger.debug("webdriver_task task %s:%s:%s, queue_name is %s" % (task['project'], task['taskid'],task['url'],task.get('schedule', {}).get('queue_name')))
+                logger.debug("webdriver_task task %s:%s, queue_name is %s" % (task['project'], task['taskid'],task.get('schedule', {}).get('queue_name')))
+                logger.debug("webdriver_url is %s"%(task['url']))
             out_queue.put_nowait(task)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
@@ -458,7 +458,6 @@ class Scheduler(object):
         while len(tasks) < self.LOOP_LIMIT:
             try:
                 task = self.newtask_queue.get_nowait()
-                logger.debug('get new task is %s'%(task))
             except Queue.Empty:
                 break
 
