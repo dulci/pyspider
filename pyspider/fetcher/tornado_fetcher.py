@@ -638,8 +638,8 @@ class Fetcher(object):
                 "cookies": {},
                 "save": task.get('fetch', {}).get('save')
             }
-            logger.warning("[500] webdriver not found %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
-            logger.debug("webdriver error:%s"%(e.msg))
+            logger.error("[500] webdriver not found %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            logger.error("webdriver error:%s"%(e.msg))
             self.drivers.delete_driver(task.get('project'))
         result['configure'] = self.configure
         result['project_name'] = task.get('project')
