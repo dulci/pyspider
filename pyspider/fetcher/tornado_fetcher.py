@@ -127,9 +127,6 @@ class Fetcher(object):
         '''Send fetch result to processor'''
         if self.outqueue:
             try:
-                logger.debug("==================================================================")
-                logger.debug("fetcher is finish queue is %s task is %s"%(self.inqueue.name, task))
-                logger.debug("result is %s"%(result))
                 self.outqueue.put((task, result))
                 if self.processdb is not None:
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], fetcher_response_code=result['status_code'], status=12)
@@ -558,7 +555,6 @@ class Fetcher(object):
         try:
             if url is not None and (not task.get('fetch', {}).get('css_selector') and not task.get('fetch', {}).get('xpath_selector')):
                 driver = self.drivers.get_driver(task.get('project'), True,  task.get('fetch', {}).get('load_img'))
-                logger.warning("webdriver is %s", driver)
                 try:
                     driver.get(url)
                 except WebDriverException:
@@ -566,7 +562,7 @@ class Fetcher(object):
                     driver = self.drivers.get_driver(task.get('project'), True, task.get('fetch', {}).get('load_img'))
                     driver.get(url)
                 if task.get('fetch', {}).get('wait_for_xpath'):
-                    WebDriverWait(driver, 10, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('wait_for_xpath'))))
+                    WebDriverWait(driver, 1, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('wait_for_xpath'))))
                 origin_url = driver.current_url
                 content = driver.page_source if task.get('fetch', {}).get('encoder') is False else bytes(driver.page_source, encoding="utf8")
                 url = origin_url
@@ -582,7 +578,7 @@ class Fetcher(object):
                 source_html = driver.find_element_by_xpath(task.get('fetch', {}).get('wait_for_xpath')).text if task.get('fetch', {}).get('wait_for_xpath') else ''
                 self.webdriver_oper(driver, task.get('fetch', {}).get('css_selector'), task.get('fetch', {}).get('xpath_selector'))
                 if task.get('fetch', {}).get('wait_for_xpath'):
-                    WebDriverWait(driver, 10, 0.5).until_not(EC.text_to_be_present_in_element((By.XPATH, task.get('fetch', {}).get('wait_for_xpath')), source_html))
+                    WebDriverWait(driver, 1, 0.5).until_not(EC.text_to_be_present_in_element((By.XPATH, task.get('fetch', {}).get('wait_for_xpath')), source_html))
                 # if task.get('fetch', {}).get('css_selector'):
 #                     WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, task.get('fetch', {}).get('css_selector'))))
 #                     element = driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector'))
@@ -963,7 +959,7 @@ class Fetcher(object):
             elif isinstance(css_path, list):
                 css_path_list = css_path
             for css_path_item in css_path_list:
-                WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, css_path_item)))
+                WebDriverWait(driver,1, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, css_path_item)))
                 element = driver.find_element_by_css_selector(css_path_item)
                 driver.execute_script("arguments[0].scrollIntoView()", element)
                 ActionChains(driver).move_to_element(element).click().perform()
@@ -975,7 +971,7 @@ class Fetcher(object):
             elif isinstance(xpath, list):
                 xpath_list = xpath
             for xpath_item in xpath_list:
-                WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.XPATH, xpath_item)))
+                WebDriverWait(driver,1, 0.5).until(EC.element_to_be_clickable((By.XPATH, xpath_item)))
                 element = driver.find_element_by_xpath(xpath_item)
                 driver.execute_script("arguments[0].scrollIntoView()", element)
                 ActionChains(driver).move_to_element(element).click().perform()
