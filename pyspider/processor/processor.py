@@ -176,16 +176,16 @@ class Processor(object):
         # it's used here for performance.
         if ret.follows:
             for each in (ret.follows[x:x + 1000] for x in range(0, len(ret.follows), 1000)):
-                logger.debug("=================================================================")
-                logger.debug("task %s:%s, fetch_type is %s, queue_name is %s" % (task['project'], task['taskid'], task.get('fetch', {}).get('fetch_type'),task.get('schedule', {}).get('queue_name')))
-                if task.get('schedule', {}).get('queue_name'):
-                    for one in each:
-                        if one.get('schedule'):
-                            one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
-                        else:
-                            one['schedule'] = {'queue_name': task.get('schedule', {}).get('queue_name')}
-                for one in each:
-                    logger.debug("processor child task is %s:%s:%s, queue name is %s" % (one['project'], one['taskid'], one['url'], one.get('schedule', {}).get('queue_name')))
+                # logger.debug("=================================================================")
+                # logger.debug("task %s:%s, fetch_type is %s, queue_name is %s" % (task['project'], task['taskid'], task.get('fetch', {}).get('fetch_type'),task.get('schedule', {}).get('queue_name')))
+                # if task.get('schedule', {}).get('queue_name'):
+                #     for one in each:
+                #         if one.get('schedule'):
+                #             one['schedule']['queue_name'] = task.get('schedule', {}).get('queue_name')
+                #         else:
+                #             one['schedule'] = {'queue_name': task.get('schedule', {}).get('queue_name')}
+                # for one in each:
+                #     logger.debug("processor child task is %s:%s:%s, queue name is %s" % (one['project'], one['taskid'], one['url'], one.get('schedule', {}).get('queue_name')))
                 self.newtask_queue.put([utils.unicode_obj(newtask) for newtask in each])
 
         for project, msg, url in ret.messages:

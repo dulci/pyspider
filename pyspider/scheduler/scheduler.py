@@ -387,18 +387,23 @@ class Scheduler(object):
                 logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
                 return
         try:
-            if task.get('schedule', {}).get('queue_name'):
-                logger.debug("queue_name is %s"%(task['schedule']['queue_name']))
-                out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
+            # if task.get('schedule', {}).get('queue_name'):
+            #     logger.debug("queue_name is %s"%(task['schedule']['queue_name']))
+            #     out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
+            # else:
+            #     out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
+            #     if task.get('schedule'):
+            #         task['schedule']['queue_name'] = out_queue.name
+            #     else:
+            #         task['schedule'] = {'queue_name': out_queue.name}
+            # if task.get('fetch', {}).get('fetch_type') == 'webdriver':
+            #     logger.debug("webdriver_task task %s:%s, queue_name is %s" % (task['project'], task['taskid'],task.get('schedule', {}).get('queue_name')))
+            #     logger.debug("webdriver_url is %s"%(task['url']))
+            if task.get('fetch', {}).get('fetch_type') == 'webdriver':
+                out_queue = self.out_queues[0]
             else:
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
-                if task.get('schedule'):
-                    task['schedule']['queue_name'] = out_queue.name
-                else:
-                    task['schedule'] = {'queue_name': out_queue.name}
-            if task.get('fetch', {}).get('fetch_type') == 'webdriver':
-                logger.debug("webdriver_task task %s:%s, queue_name is %s" % (task['project'], task['taskid'],task.get('schedule', {}).get('queue_name')))
-                logger.debug("webdriver_url is %s"%(task['url']))
+            logger.debug("task %s:%s, fetch_type is %s, queque_name is %s"%(task['project'], task['taskid'], task.get('fetch', {}).get('fetch_type'), out_queue.name))
             out_queue.put_nowait(task)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
