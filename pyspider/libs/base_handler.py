@@ -9,6 +9,7 @@ import sys
 import inspect
 import functools
 import fractions
+import re
 
 import six
 from six import add_metaclass, iteritems
@@ -351,7 +352,9 @@ class BaseHandler(object):
 
     def get_taskid(self, task):
         '''Generate taskid by information of task md5(url) by default, override me'''
-        return md5string(task['url'])
+        geTaskIdUrl = re.sub(r';jsessionid=[0-9A-Za-z]{1,32}', '', task['url'])
+        geTaskIdUrl = re.sub(r'\?pa=[0-9]{0,8}$', '', geTaskIdUrl)
+        return md5string(geTaskIdUrl)
 
     # apis
     def crawl(self, url, **kwargs):
