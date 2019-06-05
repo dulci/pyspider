@@ -1059,7 +1059,7 @@ class Scheduler(object):
         if task['track']['process'].get('time'):
             self._cnt['5m_time'].event((task['project'], 'process_time'),
                                        task['track']['process'].get('time'))
-        if self.projects[task['project']] is not None:
+        if self.projects.get(task['project']) is not None:
             self.projects[task['project']].active_tasks.appendleft((time.time(), task))
         return ret
 
