@@ -1098,7 +1098,7 @@ class Scheduler(object):
         retries = task['schedule'].get('retries', self.default_schedule['retries'])
         retried = task['schedule'].get('retried', 0)
 
-        project_info = self.projects[task['project']]
+        #project_info = self.projects[task['project']]
         retry_delay = self.DEFAULT_RETRY_DELAY
         # if project_info.get('retry_delay') is not None:
         #     retry_delay = project_info.retry_delay
