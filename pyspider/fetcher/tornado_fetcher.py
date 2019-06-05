@@ -189,6 +189,7 @@ class Fetcher(object):
             result['sequence'] = int(task.get('fetch', {}).get('sequence')) - 1
         if task.get('fetch', {}).get('page_num'):
             result['page_num'] = int(task.get('fetch', {}).get('page_num')) - 1
+        result['group'] = task.get('group')
         callback(type, task, result)
         self.on_result(type, task, result)
         raise gen.Return(result)

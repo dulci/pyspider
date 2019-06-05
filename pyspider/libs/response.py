@@ -23,7 +23,7 @@ class Response(object):
 
     def __init__(self, status_code=None, url=None, orig_url=None, headers=CaseInsensitiveDict(),
                  content='', cookies=None, error=None, traceback=None, save=None, js_script_result=None, time=0, 
-                 page_num = None, project_name=None, configure={}, sequence=None):
+                 page_num = None, project_name=None, configure={}, sequence=None, group=None):
         if cookies is None:
             cookies = {}
         self.status_code = status_code
@@ -41,6 +41,7 @@ class Response(object):
         self.project_name = project_name
         self.configure = configure
         self._sequence = sequence
+        self._group = group
 
     def __repr__(self):
         return u'<Response [%d]>' % self.status_code
@@ -67,6 +68,10 @@ class Response(object):
     @property
     def page_num(self):
         return self._page_num
+
+    @property
+    def group(self):
+        return self._group
 
     @property
     def encoding(self):
@@ -257,7 +262,8 @@ def rebuild_response(r):
         project_name=r.get('project_name'),
         configure=r.get('configure'),
         sequence=r.get('sequence'),
-        page_num=r.get('page_num')
+        page_num=r.get('page_num'),
+        group=r.get('group')
     )
     return response
 
