@@ -1059,7 +1059,8 @@ class Scheduler(object):
         if task['track']['process'].get('time'):
             self._cnt['5m_time'].event((task['project'], 'process_time'),
                                        task['track']['process'].get('time'))
-        self.projects[task['project']].active_tasks.appendleft((time.time(), task))
+        if self.projects[task['project']] is not None:
+            self.projects[task['project']].active_tasks.appendleft((time.time(), task))
         return ret
 
     def on_task_done(self, task):
