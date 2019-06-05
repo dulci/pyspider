@@ -122,7 +122,6 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
         for process in self.engine.execute(self.table.select()
                                         .with_only_columns(columns=columns)
                                         .where(whl_con)
-                                        .order_by(self.table.c.created_at.desc())
                                         .offset(offset).limit(limit)
                                         .execution_options(autocommit=True)):
             yield self._parse(result2dict(columns, process))
