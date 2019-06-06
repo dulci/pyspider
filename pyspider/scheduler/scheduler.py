@@ -1059,7 +1059,8 @@ class Scheduler(object):
         if task['track']['process'].get('time'):
             self._cnt['5m_time'].event((task['project'], 'process_time'),
                                        task['track']['process'].get('time'))
-        self.projects[task['project']].active_tasks.appendleft((time.time(), task))
+        if self.projects.get(task['project']) is not None:
+            self.projects[task['project']].active_tasks.appendleft((time.time(), task))
         return ret
 
     def on_task_done(self, task):
@@ -1098,7 +1099,7 @@ class Scheduler(object):
         retries = task['schedule'].get('retries', self.default_schedule['retries'])
         retried = task['schedule'].get('retried', 0)
 
-        project_info = self.projects[task['project']]
+        #project_info = self.projects[task['project']]
         retry_delay = self.DEFAULT_RETRY_DELAY
         # if project_info.get('retry_delay') is not None:
         #     retry_delay = project_info.retry_delay
