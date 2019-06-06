@@ -197,7 +197,7 @@ class Fetcher(object):
             if result.get('status_code') and result['status_code'] != 200:
                 self.fetcherrorprojectdb.set_error(task['project'])
             else:
-                self.fetcherrorprojectdb.drop()
+                self.fetcherrorprojectdb.drop(task['project'])
             raise gen.Return(result)
 
     def sync_fetch(self, task):
