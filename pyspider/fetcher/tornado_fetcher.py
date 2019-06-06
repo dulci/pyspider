@@ -91,12 +91,13 @@ class Fetcher(object):
     splash_lua_source = open(os.path.join(os.path.dirname(__file__), "splash_fetcher.lua")).read()
     robot_txt_age = 60*60  # 1h
 
-    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None, processdb=None, taskdb=None):
+    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None, processdb=None, taskdb=None, fetcherrorprojectdb=None):
         self.inqueue = inqueue
         self.outqueue = outqueue
 
         self.processdb = processdb
         self.taskdb = taskdb
+        self.fetcherrorprojectdb = fetcherrorprojectdb
 
         self.poolsize = poolsize
         self._running = False
@@ -192,7 +193,12 @@ class Fetcher(object):
         result['group'] = task.get('group')
         callback(type, task, result)
         self.on_result(type, task, result)
-        raise gen.Return(result)
+        if self.fetcherrorprojectdb:
+            if result.get('status_code') and result['status_code'] != 200:
+                self.fetcherrorprojectdb.set_error(task['project'])
+            else:
+                self.fetcherrorprojectdb.drop()
+            raise gen.Return(result)
 
     def sync_fetch(self, task):
         '''Synchronization fetch, usually used in xmlrpc thread'''
@@ -879,6 +885,12 @@ class Fetcher(object):
                     if self.http_client.free_size() <= 0:
                         break
                     task = self.inqueue.get_nowait()
+                    #过载保护直接忽略此任务，并记录过载保护状态
+                    if self.fetcherrorprojectdb:
+                        if self.fetcherrorprojectdb.is_fetch_error(task.get('project')):
+                            logger.info('%s is overload, fetcher task will be not execute'%(task['project']))
+                            self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=15)
+                            continue
                     # FIXME: decode unicode_obj should used after data selete from
                     # database, it's used here for performance
                     task = utils.decode_unicode_obj(task)

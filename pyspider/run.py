@@ -83,6 +83,8 @@ def connect_rpc(ctx, param, value):
               help='database url for resultdb, default: sqlite')
 @click.option('--projectcache', envvar='PROJECTCACHE', callback=connect_cache,
               help='redis url for projectdb cache, default: None')
+@click.option('--fetcherrorprojectdb', envvar='FETCHERRORPROJECTDB', callback=connect_db,
+              help='redis project for fetch error, default None')
 @click.option('--processdb', envvar='PROCESSDB', callback=connect_db,
               help='database url for processdb, default: None')
 @click.option('--message-queue', envvar='AMQP_URL',
@@ -275,7 +277,7 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
         logging.info('fetcher monitor the queue name: %s', getattr(g, fetcher_name).name)
         outqueue = g.fetcher2processor
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
-                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=g.processdb)
+                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=g.processdb, fetcherrorprojectdb=g.fetcherrorprojectdb)
     fetcher.phantomjs_proxy = phantomjs_endpoint or g.phantomjs_proxy
     fetcher.splash_endpoint = splash_endpoint
     if user_agent:
@@ -370,6 +372,7 @@ def webui(ctx, host, port, cdn, scheduler_rpc, fetcher_rpc, max_rate, max_burst,
     app.config['projectdb'] = g.projectdb
     app.config['resultdb'] = g.resultdb
     app.config['processdb'] = g.processdb
+    app.config['fetcherrorprojectdb'] = g.fetcherrorprojectdb
     app.config['cdn'] = cdn
 
     if max_rate:

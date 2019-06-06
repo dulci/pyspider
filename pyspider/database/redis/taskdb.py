@@ -178,3 +178,6 @@ class TaskDB(BaseTaskDB):
 
     def clean(self, project):
         self.drop(project)
+
+    def drop_task(self, project, taskid):
+        self.redis.delete(self._gen_key(project, taskid))
