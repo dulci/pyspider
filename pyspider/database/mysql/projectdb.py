@@ -35,6 +35,7 @@ class ProjectDB(MySQLMixin, BaseProjectDB, BaseDB):
             `burst` float(11, 4),
             `updatetime` double(16, 4),
             `skip_fetcher` int(11),
+            `use_proxy` int(11),
             `remark` varchar(512)
             ) ENGINE=InnoDB CHARSET=utf8''' % self.escape(self.__tablename__))
 

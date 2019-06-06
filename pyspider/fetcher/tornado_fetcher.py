@@ -11,7 +11,6 @@ import os
 import sys
 import six
 import copy
-import time
 import json
 import logging
 import traceback
@@ -43,7 +42,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver import ActionChains
-from pyspider.libs.web_driver import Mydriver
 from pyspider.libs.web_drivers import WebDrivers
 import time
 logger = logging.getLogger('fetcher')
@@ -91,7 +89,7 @@ class Fetcher(object):
     splash_lua_source = open(os.path.join(os.path.dirname(__file__), "splash_fetcher.lua")).read()
     robot_txt_age = 60*60  # 1h
 
-    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None, processdb=None, taskdb=None):
+    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, proxypooldb=None, lifetime=None, proxyname=None, proxyparam=None, async_mode=True, configure=None, processdb=None, taskdb=None):
         self.inqueue = inqueue
         self.outqueue = outqueue
 
@@ -102,6 +100,10 @@ class Fetcher(object):
         self._running = False
         self._quit = False
         self.proxy = proxy
+        self.proxypooldb = proxypooldb
+        self.lifetime = lifetime
+        self.proxyname = proxyname
+        self.proxyparam = proxyparam
         self.async_mode = async_mode
         self.ioloop = tornado.ioloop.IOLoop()
         self.drivers = WebDrivers()
@@ -122,6 +124,10 @@ class Fetcher(object):
             '1h': counter.CounterManager(
                 lambda: counter.TimebaseAverageWindowCounter(60, 60)),
         }
+
+        if proxypooldb is not None and lifetime is not None and proxyname is not None:
+            from .proxy_pool import ProxyPool
+            self.proxypool = ProxyPool(proxypooldb=proxypooldb, lifetime=lifetime, proxyname=proxyname, proxyparam=proxyparam)
 
     def send_result(self, type, task, result):
         '''Send fetch result to processor'''
@@ -284,6 +290,11 @@ class Fetcher(object):
             proxy_string = task_fetch['proxy']
         elif self.proxy and task_fetch.get('proxy', True):
             proxy_string = self.proxy
+
+        if task.get('use_proxy') is not None and str(task.get('use_proxy')).lower() == 'true' and self.proxypool is not None:
+            # TODO 遍历获取
+            proxy_string = self.proxypool.getProxy()
+
         if proxy_string:
             if '://' not in proxy_string:
                 proxy_string = 'http://' + proxy_string

@@ -222,5 +222,9 @@ def _connect_database_cache(url):
         from .redis.projectcache import ProjectCache
         return ProjectCache(parsed.hostname, parsed.port, parsed.password,
                       int(parsed.path.strip('/') or 0))
+    elif engine == 'redis' and dbtype == 'proxypooldb':
+        from .redis.proxypooldb import Proxypooldb
+        return Proxypooldb(parsed.hostname, parsed.port, parsed.password,
+                      int(parsed.path.strip('/') or 0))
     else:
         return None

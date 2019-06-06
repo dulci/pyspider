@@ -40,6 +40,7 @@ completion_delay_monitoring_record = Table('completion_delay_monitoring_record',
                         Column('url_md5', String(50)),
                         Column('taskid', String(64)),
                         Column('skip_fetcher', Integer),
+                        Column('use_proxy', Integer),
                         mysql_engine='InnoDB',
                         mysql_charset='utf8')
 

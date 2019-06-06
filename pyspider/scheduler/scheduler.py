@@ -539,6 +539,7 @@ class Scheduler(object):
         'track',
         'lastcrawltime',
         'skip_fetcher',
+        'use_proxy',
         'page_num'
     ]
 
@@ -668,6 +669,8 @@ class Scheduler(object):
                 task['page_num'] = 0
             if task is not None and task.get('skip_fetcher') == None:
                 task['skip_fetcher'] == False
+            if task is not None and task.get('use_proxy') == None:
+                task['use_proxy'] == False
         except ValueError:
             logger.error('bad task pack %s:%s', project, taskid)
             return

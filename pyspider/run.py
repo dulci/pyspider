@@ -85,6 +85,8 @@ def connect_rpc(ctx, param, value):
               help='redis url for projectdb cache, default: None')
 @click.option('--processdb', envvar='PROCESSDB', callback=connect_db,
               help='database url for processdb, default: None')
+@click.option('--proxypooldb', envvar='PROXYPOOLDB', callback=connect_cache,
+              help='redis url for proxypooldb, default: None')
 @click.option('--message-queue', envvar='AMQP_URL',
               help='connection url to message queue, '
               'default: builtin multiprocessing.Queue')
@@ -249,6 +251,9 @@ def scavenger(ctx, scavenger_cls, get_object=False):
 @click.option('--xmlrpc-port', envvar='FETCHER_XMLRPC_PORT', default=24444)
 @click.option('--poolsize', default=100, help="max simultaneous fetches")
 @click.option('--proxy', help="proxy host:port")
+@click.option('--lifetime', help='redis url for proxypooldb, default: None')
+@click.option('--proxyname', help='proxy supplier name')
+@click.option('--proxyparam', help='proxy supplier param')
 @click.option('--user-agent', help='user agent')
 @click.option('--timeout', help='default fetch timeout')
 @click.option('--phantomjs-endpoint', help="endpoint of phantomjs, start via pyspider phantomjs")
@@ -257,7 +262,7 @@ def scavenger(ctx, scavenger_cls, get_object=False):
 @click.option('--fetcher-cls', default='pyspider.fetcher.Fetcher', callback=load_cls,
               help='Fetcher class to be used.')
 @click.pass_context
-def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
+def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, lifetime, proxyname, proxyparam, user_agent,
             timeout, phantomjs_endpoint, splash_endpoint, fetcher_name, fetcher_cls,
             async_mode=True, get_object=False, no_input=False):
     """
@@ -275,7 +280,9 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
         logging.info('fetcher monitor the queue name: %s', getattr(g, fetcher_name).name)
         outqueue = g.fetcher2processor
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
-                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=g.processdb)
+                      poolsize=poolsize, proxy=proxy, proxypooldb=g.proxypooldb, lifetime=lifetime, proxyname=proxyname,
+                      proxyparam=proxyparam, async_mode=async_mode, configure=ctx.obj['config'],
+                      processdb=g.processdb)
     fetcher.phantomjs_proxy = phantomjs_endpoint or g.phantomjs_proxy
     fetcher.splash_endpoint = splash_endpoint
     if user_agent:
@@ -510,8 +517,8 @@ def all(ctx, fetcher_num, processor_num, result_worker_num, run_in):
             threads.append(run_in(ctx.invoke, result_worker, **result_worker_config))
 
         #scavenger
-        scavenger_config = g.config.get('scavenger', {})
-        threads.append(run_in(ctx.invoke, scavenger, **scavenger_config))
+        # scavenger_config = g.config.get('scavenger', {})
+        # threads.append(run_in(ctx.invoke, scavenger, **scavenger_config))
 
         # processor
         processor_config = g.config.get('processor', {})

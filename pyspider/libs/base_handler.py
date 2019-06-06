@@ -225,7 +225,7 @@ class BaseHandler(object):
     fetch_fields = ('method', 'headers', 'user_agent', 'data', 'connect_timeout', 'timeout', 'allow_redirects', 'cookies',
                     'proxy', 'etag', 'last_modifed', 'last_modified', 'save', 'js_run_at', 'js_script',
                     'js_viewport_width', 'js_viewport_height', 'load_images', 'fetch_type', 'use_gzip', 'validate_cert',
-                    'max_redirects', 'robots_txt', 'css_selector', 'xpath_selector', 'is_final', 'sequence', 'page_num', 'encoder', 'load_img', 'skip_fetcher', 'wait_for_xpath')
+                    'max_redirects', 'robots_txt', 'css_selector', 'xpath_selector', 'is_final', 'sequence', 'page_num', 'encoder', 'load_img', 'skip_fetcher', 'use_proxy', 'wait_for_xpath')
     process_fields = ('callback', 'process_time_limit')
 
     @staticmethod
@@ -312,6 +312,16 @@ class BaseHandler(object):
 
         task['schedule'] = schedule
 
+        if 'skip_fetcher' in kwargs:
+            task['skip_fetcher'] = kwargs.pop('skip_fetcher')
+        else:
+            task['skip_fetcher'] = False
+
+        if 'use_proxy' in kwargs:
+            task['use_proxy'] = kwargs.pop('use_proxy')
+        else:
+            task['use_proxy'] = False
+
         fetch = {}
         for key in self.fetch_fields:
             if key in kwargs:
@@ -331,11 +341,6 @@ class BaseHandler(object):
             task['taskid'] = kwargs.pop('taskid')
         else:
             task['taskid'] = self.get_taskid(task)
-
-        # if 'skip_fetcher' in kwargs:
-        #     task['skip_fetcher'] = kwargs.pop('skip_fetcher')
-        # else:
-        #     task['skip_fetcher'] = False
 
         if kwargs:
             raise TypeError('crawl() got unexpected keyword argument: %s' % kwargs.keys())

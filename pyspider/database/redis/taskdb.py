@@ -64,6 +64,8 @@ class TaskDB(BaseTaskDB):
                 data[each] = json.dumps(data[each])
         if data.get('skip_fetcher') is not None:
             data['skip_fetcher'] = str(data['skip_fetcher'])
+        if data.get('use_proxy') is not None:
+            data['use_proxy'] = str(data['use_proxy'])
         return data
 
     @property
