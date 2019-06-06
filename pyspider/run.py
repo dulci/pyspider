@@ -83,6 +83,8 @@ def connect_rpc(ctx, param, value):
               help='database url for resultdb, default: sqlite')
 @click.option('--projectcache', envvar='PROJECTCACHE', callback=connect_cache,
               help='redis url for projectdb cache, default: None')
+@click.option('--fetcherrorprojectdb', envvar='FETCHERRORPROJECTDB', callback=connect_db,
+              help='redis project for fetch error, default None')
 @click.option('--processdb', envvar='PROCESSDB', callback=connect_db,
               help='database url for processdb, default: None')
 @click.option('--proxypooldb', envvar='PROXYPOOLDB', callback=connect_cache,
@@ -282,7 +284,7 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, lifetime, pr
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
                       poolsize=poolsize, proxy=proxy, proxypooldb=g.proxypooldb, lifetime=lifetime, proxyname=proxyname,
                       proxyparam=proxyparam, async_mode=async_mode, configure=ctx.obj['config'],
-                      processdb=g.processdb)
+                      processdb=g.processdb, fetcherrorprojectdb=g.fetcherrorprojectdb)
     fetcher.phantomjs_proxy = phantomjs_endpoint or g.phantomjs_proxy
     fetcher.splash_endpoint = splash_endpoint
     if user_agent:
@@ -377,6 +379,7 @@ def webui(ctx, host, port, cdn, scheduler_rpc, fetcher_rpc, max_rate, max_burst,
     app.config['projectdb'] = g.projectdb
     app.config['resultdb'] = g.resultdb
     app.config['processdb'] = g.processdb
+    app.config['fetcherrorprojectdb'] = g.fetcherrorprojectdb
     app.config['cdn'] = cdn
 
     if max_rate:
@@ -517,8 +520,8 @@ def all(ctx, fetcher_num, processor_num, result_worker_num, run_in):
             threads.append(run_in(ctx.invoke, result_worker, **result_worker_config))
 
         #scavenger
-        # scavenger_config = g.config.get('scavenger', {})
-        # threads.append(run_in(ctx.invoke, scavenger, **scavenger_config))
+        scavenger_config = g.config.get('scavenger', {})
+        threads.append(run_in(ctx.invoke, scavenger, **scavenger_config))
 
         # processor
         processor_config = g.config.get('processor', {})

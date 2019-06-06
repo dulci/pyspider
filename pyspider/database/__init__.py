@@ -56,9 +56,9 @@ def _connect_database(url):  # NOQA
         engine, dbtype = scheme[0], scheme[-1]
         other_scheme = "+".join(scheme[1:-1])
 
-    if dbtype not in ('taskdb', 'projectdb', 'resultdb', 'processdb'):
+    if dbtype not in ('taskdb', 'projectdb', 'resultdb', 'processdb', 'fetcherrorprojectdb'):
         raise LookupError('unknown database type: %s, '
-                          'type should be one of ["taskdb", "projectdb", "resultdb", "processdb"]', dbtype)
+                          'type should be one of ["taskdb", "projectdb", "resultdb", "processdb", "fetcherrorprojectdb"]', dbtype)
 
     if engine == 'mysql':
         return _connect_mysql(parsed,dbtype)
@@ -76,6 +76,10 @@ def _connect_database(url):  # NOQA
         if dbtype == 'taskdb':
             from .redis.taskdb import TaskDB
             return TaskDB(parsed.hostname, parsed.port, parsed.password,
+                          int(parsed.path.strip('/') or 0))
+        elif dbtype == 'fetcherrorprojectdb':
+            from .redis.fetch_error_project import FetchErrorProject
+            return FetchErrorProject(parsed.hostname, parsed.port, parsed.password,
                           int(parsed.path.strip('/') or 0))
         else:
             raise LookupError('not supported dbtype: %s', dbtype)
