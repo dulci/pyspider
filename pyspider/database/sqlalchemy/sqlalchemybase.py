@@ -10,13 +10,7 @@ import time
 def result2dict(columns, task):
     r = {}
     for key in task.keys():
-        try:
-            if task[key] is not None:
-                r[key] = str(task[key]).encode("utf-8")
-            else:
-                r[key] = None
-        except Exception as e:
-            print(task[key])
+        r[key] = task[key]
     return r
 
 
