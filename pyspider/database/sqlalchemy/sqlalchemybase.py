@@ -10,7 +10,10 @@ import time
 def result2dict(columns, task):
     r = {}
     for key in task.keys():
-        r[key] = task[key]
+        try:
+            r[key] = task[key]
+        except Exception as e:
+            print(task[key])
     return r
 
 
