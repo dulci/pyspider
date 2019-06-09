@@ -476,7 +476,7 @@ def is_all_url_exists(response, url_list):
     all_exists = True
     for index in range(len(url_list)-1, -1, -1):
         group = response.group if response.group else 'self_crawler'
-        if not task_db.get_task(response.project, md5string(url_list[index])) and not [result for result in result_db.select(response.project, group, taskid=md5string(url_list[index], fields={'taskid'}))]:
+        if not task_db.get_task(response.project, md5string(url_list[index])) and not [result for result in result_db.select(response.project, group, taskid=md5string(url_list[index], fields=['taskid']))]:
             all_exists = False
             continue
         url_list.pop(index)
