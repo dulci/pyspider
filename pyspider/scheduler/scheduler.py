@@ -345,8 +345,8 @@ class Scheduler(object):
             for process in processes:
                 if process is not None:
                     return
-            else:
-                self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
+                else:
+                    self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
         return self.taskdb.insert(task['project'], task['taskid'], task)
 
     def update_task(self, task):
