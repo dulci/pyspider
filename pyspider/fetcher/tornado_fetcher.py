@@ -20,6 +20,7 @@ import tornado.ioloop
 import tornado.httputil
 import tornado.httpclient
 import pyspider
+import re
 
 from six.moves import queue, http_cookies
 from six.moves.urllib.robotparser import RobotFileParser
@@ -201,8 +202,8 @@ class Fetcher(object):
         self.on_result(type, task, result)
         if self.fetcherrorprojectdb:
             if result.get('status_code') and result['status_code'] != 200:
-                self.fetcherrorprojectdb.set_error(task['project'])
-            else:
+                self.fetcherrorprojectdb.set_error(task['project'], task['taskid'])
+            elif result['status_code'] == 200 and re.search('^[0-9a-zA-Z]+$', task['taskid']):
                 self.fetcherrorprojectdb.drop(task['project'])
             raise gen.Return(result)
 
