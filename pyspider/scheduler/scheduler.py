@@ -338,13 +338,15 @@ class Scheduler(object):
                 if pro is not None:
                     group = pro['group']
 
+            fetch = None
             if task.get('fetch') is not None:
-                processes = self.processdb.select(project=task['project'], taskid=task['taskid'])
-                for process in processes:
-                    if process is not None:
-                        return
-            else:
-                self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
+                fetch = task['fetch']
+            processes = self.processdb.select(project=task['project'], taskid=task['taskid'])
+            for process in processes:
+                if process is not None:
+                    return
+                else:
+                    self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
         return self.taskdb.insert(task['project'], task['taskid'], task)
 
     def update_task(self, task):
@@ -355,7 +357,6 @@ class Scheduler(object):
         '''put task to task queue'''
         _schedule = task.get('schedule', self.default_schedule)
         if task['project'] not in self.projects:
-            logger.error('task %s,%s of %s is not in self.projects' % (task['taskid'], task['url'], task['project']))
             return
         self.projects[task['project']].task_queue.put(
             task['taskid'],
