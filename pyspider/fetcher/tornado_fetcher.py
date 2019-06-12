@@ -202,9 +202,7 @@ class Fetcher(object):
         if retry_times is not None:
             return result
         if (task.get('fetch', {}).get('proxy') or task.get('fetch', {}).get('proxy_host')) and result.get('status_code') != 200 and retry_times is None:
-            # proxy = re.search(task.get('fetch', {}).get('proxy')[7:-1].replace(':', ' port '), result.get('error'))
             proxy = task.get('fetch', {}).get('proxy')[7:-1] if task.get('fetch', {}).get('proxy') else '%s:%s'%(task.get('fetch', {}).get('proxy_host'), task.get('fetch', {}).get('proxy_port'))
-            # if re.search(proxy.replace(':', ' port '), result.get('error')):
             if result.get('status_code') == 599:
                 self.proxypool.complain(proxy)
                 for index in range(self.proxy_retry_times):
@@ -215,6 +213,8 @@ class Fetcher(object):
                         break
                     elif result.get('status_code') == 599:
                         self.proxypool.complain(proxy)
+        if task.get('fetch', {}).get('headers') and isinstance(task.get('fetch', {})['headers'], tornado.httputil.HTTPHeaders):
+            task.get('fetch', {})['headers'] = task.get('fetch', {})['headers']._dict
 
         callback(type, task, result)
         self.on_result(type, task, result)
