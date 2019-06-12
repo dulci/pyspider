@@ -46,16 +46,16 @@ class Proxypooldb(object):
     def complain(self, pos):
         reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
         if reputation is None:
-            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + pos, -1)
+            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), -1)
         else:
-            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + pos, str(int(reputation) - 1))
+            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), str(int(reputation) - 1))
 
     def encourage(self, pos):
         reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
         if reputation is None:
-            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + pos, 1)
+            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), 1)
         else:
-            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + pos, str(int(reputation) + 1))
+            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), str(int(reputation) + 1))
 
     def getReputation(self, pos):
         reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
@@ -74,8 +74,14 @@ class Proxypooldb(object):
     def addProxy(self, pos, proxy, lifetime):
         self.redis.setex(self.__PREFIX__ + self.__PROXY_KEY__ + str(pos), lifetime, proxy)
 
+    def addReputation(self, pos, lifetime):
+        self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, str(0))
+
     def deleteProxy(self, pos):
         self.redis.delete(self.__PREFIX__ + self.__PROXY_KEY__ + str(pos))
+
+    def deleteReputation(self, pos):
+        self.redis.delete(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
 
     def getPoolSize(self):
         return len(self.getIndexes())
@@ -92,11 +98,24 @@ class Proxypooldb(object):
 
     def deleteIndex(self, pos, lifetime):
         self.redis.delete(self.__PREFIX__ + self.__INDEX_KEY__ + str(pos))
+        self.deleteProxy(pos)
+        self.deleteReputation(pos)
 
     def getIndexes(self):
         indexes = self.redis.keys(self.__PREFIX__ + self.__INDEX_KEY__ + "*")
         indexes.sort()
         return indexes
+
+    def getReputations(self):
+        indexes = self.redis.keys(self.__PREFIX__ + self.__REPUTATION_KEY__ + "*")
+        indexes.sort()
+        return indexes
+
+    def getMaxReputation(self):
+        indexes = self.getReputations()
+        for reputation in sorted(indexes, key=lambda index: int(self.redis.get(index)), reverse=True):
+            if self.redis.keys(self.__PREFIX__ + self.__INDEX_KEY__ + reputation.decode('utf-8').split('.')[-1]):
+                return reputation
 
     def lockPool(self):
         self.lock = self.redis.lock(self.__PREFIX__ + self.__LOCK_KEY__, timeout=15, sleep=1, blocking_timeout=5, thread_local=False)
@@ -106,3 +125,8 @@ class Proxypooldb(object):
         if self.lock is not None:
             self.lock.release()
             self.lock = None
+
+    def getPos(self, proxy):
+        index = [x for x in self.redis.keys(self.__PREFIX__ + self.__PROXY_KEY__ + '*') if self.redis.get(x).decode('utf-8') == proxy]
+        if index:
+            return int(index[0].decode('utf-8').split('.')[-1])

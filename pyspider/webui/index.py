@@ -96,7 +96,7 @@ def project_update():
     name = request.form['name']
     value = request.form['value']
 
-    if name == 'status' and value in ['RUNNING','DEBUG']:
+    if app.config['fetcherrorprojectdb'] and name == 'status' and value in ['RUNNING','DEBUG']:
         app.config['fetcherrorprojectdb'].drop(project)
     project_info = projectdb.get(project, fields=('name', 'group'))
     if not project_info:

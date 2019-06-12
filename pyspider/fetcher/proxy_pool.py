@@ -5,6 +5,8 @@ import urllib3
 logger = logging.getLogger('proxypool')
 
 class ProxyPool(object):
+    max_pool_size = 4
+    fire_num = 100
     def __init__(self, proxypooldb, lifetime, proxyname, proxyparam=None):
         self.proxypooldb = proxypooldb
         self.lifetime = lifetime
@@ -24,14 +26,31 @@ class ProxyPool(object):
                     nextPos = index
                     break
             if nextPos is None:
-                nextPos = self.addProxy()
+                if poolsize < self.max_pool_size + 1:
+                    nextPos = self.addProxy()
+                else:
+                    maxReputationPos = self.getMaxReputationPos()
+                    if maxReputationPos:
+                        nextPos = maxReputationPos
+                    else:
+                        nextPos = self.proxypooldb.getIndex(indexes[0])
         else:
-            nextPos = self.proxypooldb.getIndex(indexes[0])
+            maxReputationPos = self.getMaxReputationPos()
+            if maxReputationPos:
+                nextPos = maxReputationPos
+            else:
+                nextPos = self.proxypooldb.getIndex(indexes[0])
 
         if nextPos is not None:
             return self.proxypooldb.getProxy(nextPos)
         else:
             return None
+
+    def getMaxReputationPos(self):
+        maxReputation = self.proxypooldb.getMaxReputation()
+        if maxReputation:
+            return maxReputation.decode('utf-8').split('.')[-1]
+
 
     def getNewProxy(self):
         if self.proxyname == 'jiguang':
@@ -44,6 +63,13 @@ class ProxyPool(object):
         else:
             return None
 
+    def complain(self, proxy):
+        pos = self.proxypooldb.getPos(proxy)
+        if pos:
+            self.proxypooldb.complain(pos)
+            if self.proxypooldb.getReputation(pos) < (self.fire_num - 2*self.fire_num):
+                self.proxypooldb.deleteIndex(pos)
+
     def addProxy(self):
         maxposBeforeLock = self.proxypooldb.getMaxPos()
         res = self.proxypooldb.lockPool()
@@ -54,6 +80,7 @@ class ProxyPool(object):
             if proxy is not None:
                 self.proxypooldb.addProxy(pos, proxy, self.lifetime)
                 self.proxypooldb.addIndex(pos, self.lifetime)
+                self.proxypooldb.addReputation(pos, self.lifetime)
             self.proxypooldb.releasePool()
             if proxy is not None:
                 return pos

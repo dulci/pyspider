@@ -89,6 +89,7 @@ class Fetcher(object):
     splash_endpoint = None
     splash_lua_source = open(os.path.join(os.path.dirname(__file__), "splash_fetcher.lua")).read()
     robot_txt_age = 60*60  # 1h
+    proxy_retry_times = 3
 
     def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, proxypooldb=None, lifetime=None, proxyname=None, proxyparam=None, async_mode=True, configure=None, processdb=None, taskdb=None, fetcherrorprojectdb=None):
         self.inqueue = inqueue
@@ -150,7 +151,7 @@ class Fetcher(object):
             return self.async_fetch(task, callback).result()
 
     @gen.coroutine
-    def async_fetch(self, task, callback=None):
+    def async_fetch(self, task, callback=None, retry_times=None):
         '''Do one fetch'''
         url = task.get('url', 'data:,')
         if callback is None:
@@ -198,6 +199,23 @@ class Fetcher(object):
         if task.get('fetch', {}).get('page_num'):
             result['page_num'] = int(task.get('fetch', {}).get('page_num')) - 1
         result['group'] = task.get('group')
+        if retry_times is not None:
+            return result
+        if (task.get('fetch', {}).get('proxy') or task.get('fetch', {}).get('proxy_host')) and result.get('status_code') != 200 and retry_times is None:
+            # proxy = re.search(task.get('fetch', {}).get('proxy')[7:-1].replace(':', ' port '), result.get('error'))
+            proxy = task.get('fetch', {}).get('proxy')[7:-1] if task.get('fetch', {}).get('proxy') else '%s:%s'%(task.get('fetch', {}).get('proxy_host'), task.get('fetch', {}).get('proxy_port'))
+            # if re.search(proxy.replace(':', ' port '), result.get('error')):
+            if result.get('status_code') == 599:
+                self.proxypool.complain(proxy)
+                for index in range(self.proxy_retry_times):
+                    task['fetch'].update(self.pack_proxy_parameters(self.proxypooldb.getPos(proxy)))
+                    proxy = task.get('fetch', {}).get('proxy')[7:-1] if task.get('fetch', {}).get('proxy') else '%s:%s'%(task.get('fetch', {}).get('proxy_host'), task.get('fetch', {}).get('proxy_port'))
+                    result = yield self.async_fetch(task, callback, index)
+                    if result.get('status_code') == 200:
+                        break
+                    elif result.get('status_code') == 599:
+                        self.proxypool.complain(proxy)
+
         callback(type, task, result)
         self.on_result(type, task, result)
         if self.fetcherrorprojectdb:
@@ -205,7 +223,7 @@ class Fetcher(object):
                 self.fetcherrorprojectdb.set_error(task['project'], task['taskid'])
             elif result['status_code'] == 200 and re.search('^[0-9a-zA-Z]+$', task['taskid']):
                 self.fetcherrorprojectdb.drop(task['project'])
-            raise gen.Return(result)
+        raise gen.Return(result)
 
     def sync_fetch(self, task):
         '''Synchronization fetch, usually used in xmlrpc thread'''
@@ -273,6 +291,26 @@ class Fetcher(object):
 
     allowed_options = ['method', 'data', 'connect_timeout', 'timeout', 'cookies', 'use_gzip', 'validate_cert']
 
+    def pack_proxy_parameters(self, pos):
+        fetch = dict()
+        proxy_string = self.proxypool.getProxy(pos)
+        if proxy_string:
+            if '://' not in proxy_string:
+                proxy_string = 'http://' + proxy_string
+            proxy_splited = urlsplit(proxy_string)
+            fetch['proxy_host'] = proxy_splited.hostname
+            if proxy_splited.username:
+                fetch['proxy_username'] = proxy_splited.username
+            if proxy_splited.password:
+                fetch['proxy_password'] = proxy_splited.password
+            if six.PY2:
+                for key in ('proxy_host', 'proxy_username', 'proxy_password'):
+                    if key in fetch:
+                        fetch[key] = fetch[key].encode('utf8')
+            fetch['proxy_port'] = proxy_splited.port or 8080
+            fetch['proxy'] = 'http://%s:%s/'%(fetch['proxy_host'], fetch['proxy_port'])
+        return fetch
+
     def pack_tornado_request_parameters(self, url, task):
         fetch = copy.deepcopy(self.default_options)
         fetch['url'] = url
@@ -300,7 +338,7 @@ class Fetcher(object):
 
         if task.get('use_proxy') is not None and str(task.get('use_proxy')).lower() == 'true' and self.proxypool is not None:
             # TODO 遍历获取
-            proxy_string = self.proxypool.getProxy()
+            proxy_string = self.proxypool.getProxy() if not proxy_string else proxy_string
 
         if proxy_string:
             if '://' not in proxy_string:
@@ -463,6 +501,7 @@ class Fetcher(object):
         handle_error = lambda x: self.handle_error('http', url, task, start_time, x)
         # setup request parameters
         fetch = self.pack_tornado_request_parameters(url, task)
+        task['fetch'].update(fetch)
         task_fetch = task.get('fetch', {})
 
         session = cookies.RequestsCookieJar()
