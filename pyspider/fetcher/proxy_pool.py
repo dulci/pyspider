@@ -1,7 +1,7 @@
 import time,hashlib
 import logging
 import urllib3
-
+import re
 logger = logging.getLogger('proxypool')
 
 class ProxyPool(object):
@@ -56,7 +56,7 @@ class ProxyPool(object):
         if self.proxyname == 'jiguang':
             url = 'http://d.jghttp.golangapi.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=3&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
             r = urllib3.PoolManager().request('GET', url)
-            if r.status == 200:
+            if r.status == 200 and re.search('^[0-9\.:]+$', str(r.data.decode()).replace('\r\n', '')):
                 return str(r.data.decode()).replace('\r\n', '')
             else:
                 return None

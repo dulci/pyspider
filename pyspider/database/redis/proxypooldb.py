@@ -96,7 +96,7 @@ class Proxypooldb(object):
     def addIndex(self, pos, lifetime):
         self.redis.setex(self.__PREFIX__ + self.__INDEX_KEY__ + str(pos), lifetime, str(pos))
 
-    def deleteIndex(self, pos, lifetime):
+    def deleteIndex(self, pos):
         self.redis.delete(self.__PREFIX__ + self.__INDEX_KEY__ + str(pos))
         self.deleteProxy(pos)
         self.deleteReputation(pos)
