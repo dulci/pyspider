@@ -179,6 +179,7 @@ class Processor(object):
         if ret.follows:
             for each in (ret.follows[x:x + 1000] for x in range(0, len(ret.follows), 1000)):
                 self.newtask_queue.put([utils.unicode_obj(newtask) for newtask in each])
+                logger.debug('processer follows one is %s to new task queue' % (each))
 
         for project, msg, url in ret.messages:
             try:

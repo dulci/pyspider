@@ -208,16 +208,16 @@ class Scheduler(object):
     def _update_projects(self):
         '''Check project update'''
         now = time.time()
-        logger.debug("scheduler check update time is approached")
+        # logger.debug("scheduler check update time is approached")
         if (
                 not self._force_update_project
                 and self._last_update_project + self.UPDATE_PROJECT_INTERVAL > now
         ):
             return
-        logger.debug("scheduler check update time has arrived")
+        # logger.debug("scheduler check update time has arrived")
         projects = self.projectdb.check_update(self._last_update_project)
         index = 0
-        logger.debug("scheduler projects begin the loop of update")
+        # logger.debug("scheduler projects begin the loop of update")
         for project in projects:
             index += 1
             self._update_project(project)
@@ -225,7 +225,7 @@ class Scheduler(object):
                 logger.debug("project: %s updated. current projects: %s", project['name'], index)
             # if self.projectcache:
             #     self.projectcache.set_project_delay_level(project['name'], 0)
-        logger.debug("scheduler projects end the loop of update")
+        # logger.debug("scheduler projects end the loop of update")
         self._force_update_project = False
         self._last_update_project = now
 
@@ -446,7 +446,7 @@ class Scheduler(object):
         '''Check new task queue'''
         # check _postpone_request first
         todo = []
-        logger.debug("scheduler begin check task of postpone request")
+        # logger.debug("scheduler begin check task of postpone request")
         for task in self._postpone_request:
             if task['project'] not in self.projects:
                 continue
@@ -455,7 +455,7 @@ class Scheduler(object):
             else:
                 self.on_request(task)
         self._postpone_request = todo
-        logger.debug("scheduler end check task of postpone request")
+        # logger.debug("scheduler end check task of postpone request")
 
         tasks = {}
         logger.debug("scheduler begin get new request task")
@@ -487,10 +487,10 @@ class Scheduler(object):
                 tasks[task['taskid']] = task
         logger.debug("scheduler end get new request task, task num: %s", len(tasks))
 
-        logger.debug("scheduler begin deal new request task")
+        # logger.debug("scheduler begin deal new request task")
         for task in itervalues(tasks):
             self.on_request(task)
-        logger.debug("scheduler end deal new request task")
+        # logger.debug("scheduler end deal new request task")
 
         return len(tasks)
 
@@ -501,7 +501,7 @@ class Scheduler(object):
         if now - self._last_tick < 1:
             return False
         self._last_tick += 1
-        logger.debug("scheduler begin check cronjob of projects")
+        # logger.debug("scheduler begin check cronjob of projects")
         for project in itervalues(self.projects):
             if not project.active:
                 continue
@@ -525,7 +525,7 @@ class Scheduler(object):
                     'callback': '_on_cronjob',
                 },
             })
-        logger.debug("scheduler end check cronjob of projects")
+        # logger.debug("scheduler end check cronjob of projects")
         return True
 
     request_task_fields = [
@@ -551,7 +551,7 @@ class Scheduler(object):
 
     def _check_select(self):
         '''Select task to fetch & process'''
-        logger.debug("scheduler begin send new task")
+        # logger.debug("scheduler begin send new task")
         while self._send_buffer:
             _task = self._send_buffer.pop()
             try:
@@ -560,7 +560,7 @@ class Scheduler(object):
             except Queue.Full:
                 self._send_buffer.append(_task)
                 break
-        logger.debug("scheduler end send new task")
+        # logger.debug("scheduler end send new task")
 
         if self._out_queue_full():
             return {}
@@ -571,7 +571,7 @@ class Scheduler(object):
         limit = self.LOOP_LIMIT
 
         # dynamic assign select limit for each project, use qsize as weight
-        logger.debug("scheduler begin calculate then weight of project")
+        # logger.debug("scheduler begin calculate then weight of project")
         project_weights, total_weight = dict(), 0
         for project in itervalues(self.projects):  # type:Project
             if not project.active:
@@ -588,12 +588,12 @@ class Scheduler(object):
             total_weight += pro_weight
             project_weights[project.name] = pro_weight
             pass
-        logger.debug("scheduler end calculate then weight of project")
+        # logger.debug("scheduler end calculate then weight of project")
 
         min_project_limit = int(limit / 10.)  # ensure minimum select limit for each project
         max_project_limit = int(limit / 3.0)  # ensure maximum select limit for each project
 
-        logger.debug("scheduler begin calculate limit of project")
+        # logger.debug("scheduler begin calculate limit of project")
         for pro_name, pro_weight in iteritems(project_weights):
             if cnt >= limit:
                 break
@@ -653,12 +653,12 @@ class Scheduler(object):
                             "force_update": True,
                         },
                     })
-        logger.debug("scheduler end calculate limit of project")
+        # logger.debug("scheduler end calculate limit of project")
 
-        logger.debug("scheduler begin load put postpone tasks")
+        # logger.debug("scheduler begin load put postpone tasks")
         for project, taskid in taskids:
             self._load_put_task(project, taskid)
-        logger.debug("scheduler end load put postpone tasks")
+        # logger.debug("scheduler end load put postpone tasks")
 
         return cnt_dict
 
@@ -726,16 +726,16 @@ class Scheduler(object):
         '''Dump counters every 60 seconds'''
         now = time.time()
         if now - self._last_dump_cnt > 60:
-            logger.debug("scheduler begin dump cnt to file")
+            # logger.debug("scheduler begin dump cnt to file")
             self._last_dump_cnt = now
             self._dump_cnt()
             self._print_counter_log()
-            logger.debug("scheduler end dump cnt to file")
+            # logger.debug("scheduler end dump cnt to file")
 
     def _check_delete(self):
         '''Check project delete'''
         now = time.time()
-        logger.debug("scheduler begin check delete projects")
+        # logger.debug("scheduler begin check delete projects")
         for project in list(itervalues(self.projects)):
             if project.db_status != 'STOP':
                 continue
@@ -752,7 +752,7 @@ class Scheduler(object):
                 self.resultdb.drop(project.name)
             for each in self._cnt.values():
                 del each[project.name]
-        logger.debug("scheduler end check delete projects")
+        # logger.debug("scheduler end check delete projects")
 
     def __len__(self):
         return sum(len(x.task_queue) for x in itervalues(self.projects))
