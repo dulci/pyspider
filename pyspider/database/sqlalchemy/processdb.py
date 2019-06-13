@@ -95,7 +95,10 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
     def select(self, project, taskid, group=None, url=None, status=None, type=None, fields=None, offset=0, limit=None):
         self.table.name = self.__tablename__
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
-        whl_con = and_(self.table.c.taskid == taskid)
+        whl_con = and_('1' == '1')
+        # whl_con = and_(self.table.c.group == group)
+        if taskid:
+            whl_con = and_(whl_con, self.table.c.taskid == taskid)
         if project is not None and project != '':
             whl_con = and_(whl_con, self.table.c.project == project)
         if group is not None and group != '':
@@ -119,7 +122,6 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
         for process in self.engine.execute(self.table.select()
                                         .with_only_columns(columns=columns)
                                         .where(whl_con)
-                                        .order_by(self.table.c.created_at.desc())
                                         .offset(offset).limit(limit)
                                         .execution_options(autocommit=True)):
             yield self._parse(result2dict(columns, process))
@@ -141,7 +143,7 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
         elif str(process).find('index_page') != -1:
             obj['type'] = 2
         else:
-            obj['type'] = 3
+            obj['type'] = 9#过程页
         if fetch is not None:
             obj['fetch'] = fetch
         obj['url'] = url
@@ -190,7 +192,12 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
 
     def count(self, project, group, taskid=None, url=None, status=None, type=None):
         self.table.name = self.__tablename__
-        whl_con = and_(self.table.c.project == project, self.table.c.group == group)
+        whl_con = and_('1' == '1')
+        if project:
+            whl_con = and_(whl_con, self.table.c.project == project)
+        if group:
+            whl_con = and_(whl_con,self.table.c.group == group)
+        # whl_con = and_(self.table.c.project == project, self.table.c.group == group)
         if taskid is not None and taskid != '':
             whl_con = and_(whl_con, self.table.c.taskid == taskid)
         if url is not None and url != '':

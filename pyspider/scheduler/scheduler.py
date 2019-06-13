@@ -208,16 +208,24 @@ class Scheduler(object):
     def _update_projects(self):
         '''Check project update'''
         now = time.time()
+        logger.debug("scheduler check update time is approached")
         if (
                 not self._force_update_project
                 and self._last_update_project + self.UPDATE_PROJECT_INTERVAL > now
         ):
             return
-        for project in self.projectdb.check_update(self._last_update_project):
+        logger.debug("scheduler check update time has arrived")
+        projects = self.projectdb.check_update(self._last_update_project)
+        index = 0
+        logger.debug("scheduler projects begin the loop of update")
+        for project in projects:
+            index += 1
             self._update_project(project)
-            logger.debug("project: %s updated.", project['name'])
+            if index % 100 == 0:
+                logger.debug("project: %s updated. current projects: %s", project['name'], index)
             # if self.projectcache:
             #     self.projectcache.set_project_delay_level(project['name'], 0)
+        logger.debug("scheduler projects end the loop of update")
         self._force_update_project = False
         self._last_update_project = now
 
@@ -337,8 +345,7 @@ class Scheduler(object):
             for process in processes:
                 if process is not None:
                     return
-            else:
-                self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
+            self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
         return self.taskdb.insert(task['project'], task['taskid'], task)
 
     def update_task(self, task):
@@ -371,28 +378,32 @@ class Scheduler(object):
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
                 logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
                 return
-        elif task['group'] is not None and task['group'] == 'self_crawler':
+        elif task['group'] is not None and (task['group'] == 'self_crawler' or task['group'] == 'temp_crawler'):
             oldTask = self.resultdb.get_content(task['project'], task['taskid'])
             if oldTask is not None:
                 if self.processdb is not None:
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
                 logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
                 return
-
         try:
-            if task.get('schedule', {}).get('queue_name'):
-                out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
+            # if task.get('schedule', {}).get('queue_name'):
+            #     logger.debug("queue_name is %s"%(task['schedule']['queue_name']))
+            #     out_queue = [x for x in self.out_queues if x.name == task.get('schedule', {}).get('queue_name')][0]
+            # else:
+            #     out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
+            #     if task.get('schedule'):
+            #         task['schedule']['queue_name'] = out_queue.name
+            #     else:
+            #         task['schedule'] = {'queue_name': out_queue.name}
+            # if task.get('fetch', {}).get('fetch_type') == 'webdriver':
+            #     logger.debug("webdriver_task task %s:%s, queue_name is %s" % (task['project'], task['taskid'],task.get('schedule', {}).get('queue_name')))
+            #     logger.debug("webdriver_url is %s"%(task['url']))
+            if task.get('fetch', {}).get('fetch_type') == 'webdriver':
+                out_queue = self.out_queues[0]
             else:
-                for one in self.out_queues:
-                    logger.info('queue name %s, message count %d'%(one.name, one.qsize()))
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
-            if task['taskid'] == 'on_start':
-                task['schedule']['queue_name'] = out_queue.name
-            if task['taskid'] == '_on_cronjob':
-                task['schedule'] = {'queue_name': out_queue.name}
-            logger.info("task into queque , queue's name is %s"%(out_queue.name))
+            logger.debug("task %s:%s, fetch_type is %s, queque_name is %s"%(task['project'], task['taskid'], task.get('fetch', {}).get('fetch_type'), out_queue.name))
             out_queue.put_nowait(task)
-            # self.out_queue.put_nowait(task)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
         except Queue.Full:
@@ -408,6 +419,8 @@ class Scheduler(object):
         cnt = 0
         try:
             while True:
+                if (cnt + 1) % 100 == 0:
+                    logger.debug("scheduler task done loop times: %s", cnt)
                 task = self.status_queue.get_nowait()
                 # check _on_get_info result here
                 if task.get('taskid') == '_on_get_info' and 'project' in task and 'track' in task:
@@ -433,6 +446,7 @@ class Scheduler(object):
         '''Check new task queue'''
         # check _postpone_request first
         todo = []
+        logger.debug("scheduler begin check task of postpone request")
         for task in self._postpone_request:
             if task['project'] not in self.projects:
                 continue
@@ -441,8 +455,10 @@ class Scheduler(object):
             else:
                 self.on_request(task)
         self._postpone_request = todo
+        logger.debug("scheduler end check task of postpone request")
 
         tasks = {}
+        logger.debug("scheduler begin get new request task")
         while len(tasks) < self.LOOP_LIMIT:
             try:
                 task = self.newtask_queue.get_nowait()
@@ -468,9 +484,12 @@ class Scheduler(object):
                 #         continue
 
                 tasks[task['taskid']] = task
+        logger.debug("scheduler end get new request task, task num: %s", len(tasks))
 
+        logger.debug("scheduler begin deal new request task")
         for task in itervalues(tasks):
             self.on_request(task)
+        logger.debug("scheduler end deal new request task")
 
         return len(tasks)
 
@@ -481,6 +500,7 @@ class Scheduler(object):
         if now - self._last_tick < 1:
             return False
         self._last_tick += 1
+        logger.debug("scheduler begin check cronjob of projects")
         for project in itervalues(self.projects):
             if not project.active:
                 continue
@@ -504,6 +524,7 @@ class Scheduler(object):
                     'callback': '_on_cronjob',
                 },
             })
+        logger.debug("scheduler end check cronjob of projects")
         return True
 
     request_task_fields = [
@@ -517,6 +538,7 @@ class Scheduler(object):
         'track',
         'lastcrawltime',
         'skip_fetcher',
+        'use_proxy',
         'page_num'
     ]
 
@@ -528,6 +550,7 @@ class Scheduler(object):
 
     def _check_select(self):
         '''Select task to fetch & process'''
+        logger.debug("scheduler begin send new task")
         while self._send_buffer:
             _task = self._send_buffer.pop()
             try:
@@ -536,6 +559,7 @@ class Scheduler(object):
             except Queue.Full:
                 self._send_buffer.append(_task)
                 break
+        logger.debug("scheduler end send new task")
 
         if self._out_queue_full():
             return {}
@@ -546,6 +570,7 @@ class Scheduler(object):
         limit = self.LOOP_LIMIT
 
         # dynamic assign select limit for each project, use qsize as weight
+        logger.debug("scheduler begin calculate then weight of project")
         project_weights, total_weight = dict(), 0
         for project in itervalues(self.projects):  # type:Project
             if not project.active:
@@ -562,10 +587,12 @@ class Scheduler(object):
             total_weight += pro_weight
             project_weights[project.name] = pro_weight
             pass
+        logger.debug("scheduler end calculate then weight of project")
 
         min_project_limit = int(limit / 10.)  # ensure minimum select limit for each project
         max_project_limit = int(limit / 3.0)  # ensure maximum select limit for each project
 
+        logger.debug("scheduler begin calculate limit of project")
         for pro_name, pro_weight in iteritems(project_weights):
             if cnt >= limit:
                 break
@@ -625,9 +652,12 @@ class Scheduler(object):
                             "force_update": True,
                         },
                     })
+        logger.debug("scheduler end calculate limit of project")
 
+        logger.debug("scheduler begin load put postpone tasks")
         for project, taskid in taskids:
             self._load_put_task(project, taskid)
+        logger.debug("scheduler end load put postpone tasks")
 
         return cnt_dict
 
@@ -638,6 +668,8 @@ class Scheduler(object):
                 task['page_num'] = 0
             if task is not None and task.get('skip_fetcher') == None:
                 task['skip_fetcher'] == False
+            if task is not None and task.get('use_proxy') == None:
+                task['use_proxy'] == False
         except ValueError:
             logger.error('bad task pack %s:%s', project, taskid)
             return
@@ -693,13 +725,16 @@ class Scheduler(object):
         '''Dump counters every 60 seconds'''
         now = time.time()
         if now - self._last_dump_cnt > 60:
+            logger.debug("scheduler begin dump cnt to file")
             self._last_dump_cnt = now
             self._dump_cnt()
             self._print_counter_log()
+            logger.debug("scheduler end dump cnt to file")
 
     def _check_delete(self):
         '''Check project delete'''
         now = time.time()
+        logger.debug("scheduler begin check delete projects")
         for project in list(itervalues(self.projects)):
             if project.db_status != 'STOP':
                 continue
@@ -716,6 +751,7 @@ class Scheduler(object):
                 self.resultdb.drop(project.name)
             for each in self._cnt.values():
                 del each[project.name]
+        logger.debug("scheduler end check delete projects")
 
     def __len__(self):
         return sum(len(x.task_queue) for x in itervalues(self.projects))
@@ -731,24 +767,42 @@ class Scheduler(object):
     def run_once(self):
         '''comsume queues and feed tasks to fetcher, once'''
 
+        logger.debug("scheduler begin update projects")
         self._update_projects()
+        logger.debug("scheduler end update projects")
+        logger.debug("scheduler begin check task done")
         self._check_task_done()
+        logger.debug("scheduler end check task done")
+        logger.debug("scheduler begin check request")
         self._check_request()
+        logger.debug("scheduler end check request")
+        logger.debug("scheduler begin check cronjob")
         while self._check_cronjob():
             pass
+        logger.debug("scheduler end check cronjob")
+        logger.debug("scheduler begin check select")
         self._check_select()
+        logger.debug("scheduler end check select")
+        logger.debug("scheduler begin check delete")
         self._check_delete()
+        logger.debug("scheduler end check delete")
+        logger.debug("scheduler begin try dump cnt")
         self._try_dump_cnt()
+        logger.debug("scheduler end try dump cnt")
 
     def run(self):
         '''Start scheduler loop'''
         logger.info("scheduler starting...")
 
+        loop_times = 0;
         while not self._quit:
+            loop_times += 1
             try:
                 time.sleep(self.LOOP_INTERVAL)
+                logger.debug("scheduler begin loop, current loop times: %s"%(loop_times))
                 self.run_once()
                 self._exceptions = 0
+                logger.debug("scheduler end loop, current loop times: %s"%(loop_times))
             except KeyboardInterrupt:
                 logger.error("Scheduler exit by KeyboardInterrupt")
                 break
@@ -1007,7 +1061,8 @@ class Scheduler(object):
         if task['track']['process'].get('time'):
             self._cnt['5m_time'].event((task['project'], 'process_time'),
                                        task['track']['process'].get('time'))
-        self.projects[task['project']].active_tasks.appendleft((time.time(), task))
+        if self.projects.get(task['project']) is not None:
+            self.projects[task['project']].active_tasks.appendleft((time.time(), task))
         return ret
 
     def on_task_done(self, task):
@@ -1046,7 +1101,7 @@ class Scheduler(object):
         retries = task['schedule'].get('retries', self.default_schedule['retries'])
         retried = task['schedule'].get('retried', 0)
 
-        project_info = self.projects[task['project']]
+        #project_info = self.projects[task['project']]
         retry_delay = self.DEFAULT_RETRY_DELAY
         # if project_info.get('retry_delay') is not None:
         #     retry_delay = project_info.retry_delay

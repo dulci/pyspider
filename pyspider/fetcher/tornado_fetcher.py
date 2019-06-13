@@ -11,7 +11,6 @@ import os
 import sys
 import six
 import copy
-import time
 import json
 import logging
 import traceback
@@ -21,6 +20,7 @@ import tornado.ioloop
 import tornado.httputil
 import tornado.httpclient
 import pyspider
+import re
 
 from six.moves import queue, http_cookies
 from six.moves.urllib.robotparser import RobotFileParser
@@ -43,7 +43,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver import ActionChains
-from pyspider.libs.web_driver import Mydriver
 from pyspider.libs.web_drivers import WebDrivers
 import time
 logger = logging.getLogger('fetcher')
@@ -90,18 +89,24 @@ class Fetcher(object):
     splash_endpoint = None
     splash_lua_source = open(os.path.join(os.path.dirname(__file__), "splash_fetcher.lua")).read()
     robot_txt_age = 60*60  # 1h
+    proxy_retry_times = 3
 
-    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, async_mode=True, configure=None, processdb=None, taskdb=None):
+    def __init__(self, inqueue, outqueue, poolsize=100, proxy=None, proxypooldb=None, lifetime=None, proxyname=None, proxyparam=None, async_mode=True, configure=None, processdb=None, taskdb=None, fetcherrorprojectdb=None):
         self.inqueue = inqueue
         self.outqueue = outqueue
 
         self.processdb = processdb
         self.taskdb = taskdb
+        self.fetcherrorprojectdb = fetcherrorprojectdb
 
         self.poolsize = poolsize
         self._running = False
         self._quit = False
         self.proxy = proxy
+        self.proxypooldb = proxypooldb
+        self.lifetime = lifetime
+        self.proxyname = proxyname
+        self.proxyparam = proxyparam
         self.async_mode = async_mode
         self.ioloop = tornado.ioloop.IOLoop()
         self.drivers = WebDrivers()
@@ -123,6 +128,10 @@ class Fetcher(object):
                 lambda: counter.TimebaseAverageWindowCounter(60, 60)),
         }
 
+        if proxypooldb is not None and lifetime is not None and proxyname is not None:
+            from .proxy_pool import ProxyPool
+            self.proxypool = ProxyPool(proxypooldb=proxypooldb, lifetime=lifetime, proxyname=proxyname, proxyparam=proxyparam)
+
     def send_result(self, type, task, result):
         '''Send fetch result to processor'''
         if self.outqueue:
@@ -142,7 +151,7 @@ class Fetcher(object):
             return self.async_fetch(task, callback).result()
 
     @gen.coroutine
-    def async_fetch(self, task, callback=None):
+    def async_fetch(self, task, callback=None, retry_times=None):
         '''Do one fetch'''
         url = task.get('url', 'data:,')
         if callback is None:
@@ -162,6 +171,7 @@ class Fetcher(object):
                 result = yield self.splash_fetch(url, task)
             elif task.get('fetch', {}).get('fetch_type') in ('webdriver', ):
                 type = 'webdriver'
+                logger.debug("fetcher webdriver task is %s:%s, queue name is %s"%(task['project'], task['taskid'], task.get('schedule', {}).get('queue_name')))
                 result = yield self.webdriver_fetch(url, task)
             elif task.get('fetch', {}).get('fetch_type') in ('chrome', 'ch'):
                 type = 'chrome'
@@ -188,8 +198,31 @@ class Fetcher(object):
             result['sequence'] = int(task.get('fetch', {}).get('sequence')) - 1
         if task.get('fetch', {}).get('page_num'):
             result['page_num'] = int(task.get('fetch', {}).get('page_num')) - 1
+        result['group'] = task.get('group')
+        if retry_times is not None:
+            return result
+        if (task.get('fetch', {}).get('proxy') or task.get('fetch', {}).get('proxy_host')) and result.get('status_code') != 200 and retry_times is None:
+            proxy = task.get('fetch', {}).get('proxy')[7:-1] if task.get('fetch', {}).get('proxy') else '%s:%s'%(task.get('fetch', {}).get('proxy_host'), task.get('fetch', {}).get('proxy_port'))
+            if result.get('status_code') == 599:
+                self.proxypool.complain(proxy)
+                for index in range(self.proxy_retry_times):
+                    task['fetch'].update(self.pack_proxy_parameters(self.proxypooldb.getPos(proxy)))
+                    proxy = task.get('fetch', {}).get('proxy')[7:-1] if task.get('fetch', {}).get('proxy') else '%s:%s'%(task.get('fetch', {}).get('proxy_host'), task.get('fetch', {}).get('proxy_port'))
+                    result = yield self.async_fetch(task, callback, index)
+                    if result.get('status_code') == 200:
+                        break
+                    elif result.get('status_code') == 599:
+                        self.proxypool.complain(proxy)
+        if task.get('fetch', {}).get('headers') and isinstance(task.get('fetch', {})['headers'], tornado.httputil.HTTPHeaders):
+            task.get('fetch', {})['headers'] = task.get('fetch', {})['headers']._dict
+
         callback(type, task, result)
         self.on_result(type, task, result)
+        if self.fetcherrorprojectdb:
+            if result.get('status_code') and result['status_code'] != 200:
+                self.fetcherrorprojectdb.set_error(task['project'], task['taskid'])
+            elif result['status_code'] == 200 and re.search('^[0-9a-zA-Z]+$', task['taskid']):
+                self.fetcherrorprojectdb.drop(task['project'])
         raise gen.Return(result)
 
     def sync_fetch(self, task):
@@ -258,6 +291,26 @@ class Fetcher(object):
 
     allowed_options = ['method', 'data', 'connect_timeout', 'timeout', 'cookies', 'use_gzip', 'validate_cert']
 
+    def pack_proxy_parameters(self, pos):
+        fetch = dict()
+        proxy_string = self.proxypool.getProxy(pos)
+        if proxy_string:
+            if '://' not in proxy_string:
+                proxy_string = 'http://' + proxy_string
+            proxy_splited = urlsplit(proxy_string)
+            fetch['proxy_host'] = proxy_splited.hostname
+            if proxy_splited.username:
+                fetch['proxy_username'] = proxy_splited.username
+            if proxy_splited.password:
+                fetch['proxy_password'] = proxy_splited.password
+            if six.PY2:
+                for key in ('proxy_host', 'proxy_username', 'proxy_password'):
+                    if key in fetch:
+                        fetch[key] = fetch[key].encode('utf8')
+            fetch['proxy_port'] = proxy_splited.port or 8080
+            fetch['proxy'] = 'http://%s:%s/'%(fetch['proxy_host'], fetch['proxy_port'])
+        return fetch
+
     def pack_tornado_request_parameters(self, url, task):
         fetch = copy.deepcopy(self.default_options)
         fetch['url'] = url
@@ -282,6 +335,11 @@ class Fetcher(object):
             proxy_string = task_fetch['proxy']
         elif self.proxy and task_fetch.get('proxy', True):
             proxy_string = self.proxy
+
+        if task.get('use_proxy') is not None and str(task.get('use_proxy')).lower() == 'true' and self.proxypool is not None:
+            # TODO 遍历获取
+            proxy_string = self.proxypool.getProxy() if not proxy_string else proxy_string
+
         if proxy_string:
             if '://' not in proxy_string:
                 proxy_string = 'http://' + proxy_string
@@ -443,6 +501,7 @@ class Fetcher(object):
         handle_error = lambda x: self.handle_error('http', url, task, start_time, x)
         # setup request parameters
         fetch = self.pack_tornado_request_parameters(url, task)
+        task['fetch'].update(fetch)
         task_fetch = task.get('fetch', {})
 
         session = cookies.RequestsCookieJar()
@@ -553,10 +612,15 @@ class Fetcher(object):
         handle_error = lambda x: self.handle_error('http', url, task, start_time, x)
         try:
             if url is not None and (not task.get('fetch', {}).get('css_selector') and not task.get('fetch', {}).get('xpath_selector')):
-                driver = self.drivers.get_driver(task.get('project'), True)
-                driver.get(url)
+                driver = self.drivers.get_driver(task.get('project'), True,  task.get('fetch', {}).get('load_img'))
+                try:
+                    driver.get(url)
+                except WebDriverException:
+                    self.drivers.delete_driver(task.get('project'))
+                    driver = self.drivers.get_driver(task.get('project'), True, task.get('fetch', {}).get('load_img'))
+                    driver.get(url)
                 if task.get('fetch', {}).get('wait_for_xpath'):
-                    WebDriverWait(driver, 10, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('wait_for_xpath'))))
+                    WebDriverWait(driver, 1, 0.5).until(EC.element_to_be_clickable((By.XPATH, task.get('fetch', {}).get('wait_for_xpath'))))
                 origin_url = driver.current_url
                 content = driver.page_source if task.get('fetch', {}).get('encoder') is False else bytes(driver.page_source, encoding="utf8")
                 url = origin_url
@@ -572,7 +636,7 @@ class Fetcher(object):
                 source_html = driver.find_element_by_xpath(task.get('fetch', {}).get('wait_for_xpath')).text if task.get('fetch', {}).get('wait_for_xpath') else ''
                 self.webdriver_oper(driver, task.get('fetch', {}).get('css_selector'), task.get('fetch', {}).get('xpath_selector'))
                 if task.get('fetch', {}).get('wait_for_xpath'):
-                    WebDriverWait(driver, 10, 0.5).until_not(EC.text_to_be_present_in_element((By.XPATH, task.get('fetch', {}).get('wait_for_xpath')), source_html))
+                    WebDriverWait(driver, 1, 0.5).until_not(EC.text_to_be_present_in_element((By.XPATH, task.get('fetch', {}).get('wait_for_xpath')), source_html))
                 # if task.get('fetch', {}).get('css_selector'):
 #                     WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, task.get('fetch', {}).get('css_selector'))))
 #                     element = driver.find_element_by_css_selector(task.get('fetch', {}).get('css_selector'))
@@ -605,7 +669,7 @@ class Fetcher(object):
                     "js_script_result": None,
                     "save": task.get('fetch', {}).get('save')
             }
-        except TimeoutException:
+        except TimeoutException as e:
             result = {
                     "orig_url": url,
                     "content": "load page is timeout",
@@ -617,7 +681,8 @@ class Fetcher(object):
                     "save": task.get('fetch', {}).get('save')
             }
             logger.warning("[504] webdriver timeout %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
-        except WebDriverException:
+            logger.warning("webdriver timeout error is %s"%(e.msg))
+        except WebDriverException as e:
             result = {
                 "orig_url": url,
                 "content": "webdriver not found",
@@ -628,7 +693,8 @@ class Fetcher(object):
                 "cookies": {},
                 "save": task.get('fetch', {}).get('save')
             }
-            logger.warning("[500] webdriver not found %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            logger.error("[500] webdriver not found %s:%s %s 0s", task.get('project'), task.get('taskid'), url)
+            logger.error("webdriver error:%s"%(e.msg))
             self.drivers.delete_driver(task.get('project'))
         result['configure'] = self.configure
         result['project_name'] = task.get('project')
@@ -870,11 +936,18 @@ class Fetcher(object):
                     if self.http_client.free_size() <= 0:
                         break
                     task = self.inqueue.get_nowait()
+                    #过载保护直接忽略此任务，并记录过载保护状态
+                    if self.fetcherrorprojectdb:
+                        if self.fetcherrorprojectdb.is_fetch_error(task.get('project')):
+                            logger.info('%s is overload, fetcher task will be not execute'%(task['project']))
+                            self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=15)
+                            continue
                     # FIXME: decode unicode_obj should used after data selete from
                     # database, it's used here for performance
                     task = utils.decode_unicode_obj(task)
                     if self.processdb is not None:
                         self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=11)
+                    logger.debug('fetcher will be work from queue %s get one task %s'%(self.inqueue.name, task))
                     self.fetch(task)
                 except queue.Empty:
                     break
@@ -950,7 +1023,7 @@ class Fetcher(object):
             elif isinstance(css_path, list):
                 css_path_list = css_path
             for css_path_item in css_path_list:
-                WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, css_path_item)))
+                WebDriverWait(driver,1, 0.5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, css_path_item)))
                 element = driver.find_element_by_css_selector(css_path_item)
                 driver.execute_script("arguments[0].scrollIntoView()", element)
                 ActionChains(driver).move_to_element(element).click().perform()
@@ -962,7 +1035,7 @@ class Fetcher(object):
             elif isinstance(xpath, list):
                 xpath_list = xpath
             for xpath_item in xpath_list:
-                WebDriverWait(driver,10, 0.5).until(EC.element_to_be_clickable((By.XPATH, xpath_item)))
+                WebDriverWait(driver,1, 0.5).until(EC.element_to_be_clickable((By.XPATH, xpath_item)))
                 element = driver.find_element_by_xpath(xpath_item)
                 driver.execute_script("arguments[0].scrollIntoView()", element)
                 ActionChains(driver).move_to_element(element).click().perform()

@@ -83,8 +83,12 @@ def connect_rpc(ctx, param, value):
               help='database url for resultdb, default: sqlite')
 @click.option('--projectcache', envvar='PROJECTCACHE', callback=connect_cache,
               help='redis url for projectdb cache, default: None')
+@click.option('--fetcherrorprojectdb', envvar='FETCHERRORPROJECTDB', callback=connect_db,
+              help='redis project for fetch error, default None')
 @click.option('--processdb', envvar='PROCESSDB', callback=connect_db,
               help='database url for processdb, default: None')
+@click.option('--proxypooldb', envvar='PROXYPOOLDB', callback=connect_cache,
+              help='redis url for proxypooldb, default: None')
 @click.option('--message-queue', envvar='AMQP_URL',
               help='connection url to message queue, '
               'default: builtin multiprocessing.Queue')
@@ -193,13 +197,14 @@ def cli(ctx, **kwargs):
 @click.option('--active-tasks', default=100, help='active log size')
 @click.option('--loop-limit', default=1000, help='maximum number of tasks due with in a loop')
 @click.option('--fail-pause-num', default=10, help='auto pause the project when last FAIL_PAUSE_NUM task failed, set 0 to disable')
+@click.option('--loop-interval', default=0.1, help='the interval between two loops of scheduler')
 @click.option('--scheduler-cls', default='pyspider.scheduler.ThreadBaseScheduler', callback=load_cls,
               help='scheduler class to be used.')
 @click.option('--threads', default=None, help='thread number for ThreadBaseScheduler, default: 4')
 @click.pass_context
 def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
               inqueue_limit, delete_time, active_tasks, loop_limit, fail_pause_num,
-              scheduler_cls, threads, get_object=False):
+              scheduler_cls, threads, get_object=False, loop_interval=0.1):
     """
     Run Scheduler, only one scheduler is allowed.
     """
@@ -210,14 +215,16 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
                   out_queues=[getattr(g, x) for x in g.fetcher_queue_names], data_path=g.get('data_path', 'data'))
     if threads:
         kwargs['threads'] = int(threads)
-        print ('scheduler is running in ' + str(kwargs['threads']) + ' threads.')
+        logging.info('scheduler is running in %s threads', str(kwargs['threads']))
 
+    logging.info('scheduler is running in loop_interval: %s', str(loop_interval))
     scheduler = Scheduler(**kwargs)
     scheduler.INQUEUE_LIMIT = inqueue_limit
     scheduler.DELETE_TIME = delete_time
     scheduler.ACTIVE_TASKS = active_tasks
     scheduler.LOOP_LIMIT = loop_limit
     scheduler.FAIL_PAUSE_NUM = fail_pause_num
+    scheduler.LOOP_INTERVAL = loop_interval
 
     g.instances.append(scheduler)
     if g.get('testing_mode') or get_object:
@@ -227,6 +234,18 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
         utils.run_in_thread(scheduler.xmlrpc_run, port=xmlrpc_port, bind=xmlrpc_host)
     scheduler.run()
 
+@cli.command()
+@click.option('--scavenger-cls', default='pyspider.scheduler.FailTaskRetry', callback=load_cls,
+              help='FailTaskRetry class to be used.')
+@click.pass_context
+def scavenger(ctx, scavenger_cls, get_object=False):
+    g = ctx.obj
+    FailTaskRetry = load_cls(None, None, scavenger_cls)
+    scavenger = FailTaskRetry(processdb=g.processdb, queues=[getattr(g, x) for x in g.fetcher_queue_names])
+    g.instances.append(scavenger)
+    if g.get('testing_mode') or get_object:
+        return scavenger
+    scavenger.run()
 
 @cli.command()
 @click.option('--xmlrpc/--no-xmlrpc', default=False)
@@ -234,6 +253,9 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
 @click.option('--xmlrpc-port', envvar='FETCHER_XMLRPC_PORT', default=24444)
 @click.option('--poolsize', default=100, help="max simultaneous fetches")
 @click.option('--proxy', help="proxy host:port")
+@click.option('--lifetime', help='redis url for proxypooldb, default: None')
+@click.option('--proxyname', help='proxy supplier name')
+@click.option('--proxyparam', help='proxy supplier param')
 @click.option('--user-agent', help='user agent')
 @click.option('--timeout', help='default fetch timeout')
 @click.option('--phantomjs-endpoint', help="endpoint of phantomjs, start via pyspider phantomjs")
@@ -242,7 +264,7 @@ def scheduler(ctx, xmlrpc, xmlrpc_host, xmlrpc_port,
 @click.option('--fetcher-cls', default='pyspider.fetcher.Fetcher', callback=load_cls,
               help='Fetcher class to be used.')
 @click.pass_context
-def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
+def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, lifetime, proxyname, proxyparam, user_agent,
             timeout, phantomjs_endpoint, splash_endpoint, fetcher_name, fetcher_cls,
             async_mode=True, get_object=False, no_input=False):
     """
@@ -257,9 +279,12 @@ def fetcher(ctx, xmlrpc, xmlrpc_host, xmlrpc_port, poolsize, proxy, user_agent,
     else:
         # inqueue = g.scheduler2fetcher
         inqueue = getattr(g, fetcher_name)
+        logging.info('fetcher monitor the queue name: %s', getattr(g, fetcher_name).name)
         outqueue = g.fetcher2processor
     fetcher = Fetcher(inqueue=inqueue, outqueue=outqueue,
-                      poolsize=poolsize, proxy=proxy, async_mode=async_mode, configure=ctx.obj['config'], processdb=g.processdb)
+                      poolsize=poolsize, proxy=proxy, proxypooldb=g.proxypooldb, lifetime=lifetime, proxyname=proxyname,
+                      proxyparam=proxyparam, async_mode=async_mode, configure=ctx.obj['config'],
+                      processdb=g.processdb, fetcherrorprojectdb=g.fetcherrorprojectdb)
     fetcher.phantomjs_proxy = phantomjs_endpoint or g.phantomjs_proxy
     fetcher.splash_endpoint = splash_endpoint
     if user_agent:
@@ -354,6 +379,7 @@ def webui(ctx, host, port, cdn, scheduler_rpc, fetcher_rpc, max_rate, max_burst,
     app.config['projectdb'] = g.projectdb
     app.config['resultdb'] = g.resultdb
     app.config['processdb'] = g.processdb
+    app.config['fetcherrorprojectdb'] = g.fetcherrorprojectdb
     app.config['cdn'] = cdn
 
     if max_rate:
@@ -492,6 +518,10 @@ def all(ctx, fetcher_num, processor_num, result_worker_num, run_in):
         result_worker_config = g.config.get('result_worker', {})
         for i in range(result_worker_num):
             threads.append(run_in(ctx.invoke, result_worker, **result_worker_config))
+
+        #scavenger
+        scavenger_config = g.config.get('scavenger', {})
+        threads.append(run_in(ctx.invoke, scavenger, **scavenger_config))
 
         # processor
         processor_config = g.config.get('processor', {})

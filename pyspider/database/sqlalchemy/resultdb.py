@@ -40,6 +40,7 @@ completion_delay_monitoring_record = Table('completion_delay_monitoring_record',
                         Column('url_md5', String(50)),
                         Column('taskid', String(64)),
                         Column('skip_fetcher', Integer),
+                        Column('use_proxy', Integer),
                         mysql_engine='InnoDB',
                         mysql_charset='utf8')
 
@@ -122,7 +123,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         return data
 
     def save(self, project, taskid, url, result, group=None):
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             tablename = "crawler_content_result_record"
         else:
             tablename = "crawler_result_record"
@@ -144,7 +145,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         #     db_result = self.engine.execute(self.table.insert()
         #                                .values(**self._stringify(obj)))
         db_result = self._save(tablename, taskid, obj)
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             return db_result
         else:
             group_name = str(group).strip()
@@ -244,7 +245,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             yield self._parse(result2dict(columns, task))
 
     def select(self, project, group, taskid=None, url=None, upload_status=None, fields=None, offset=0, limit=None):
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             tablename = "crawler_content_result_record"
         elif group == 'completion_delay_monitoring':
             tablename = "crawler_result_record"
@@ -279,7 +280,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             return count
 
     def count(self, project, group, taskid=None, url=None, upload_status=None):
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             tablename = "crawler_content_result_record"
         elif group == 'completion_delay_monitoring':
             tablename = "crawler_result_record"
@@ -314,7 +315,6 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             return self._parse(result2dict(columns, task))
 
     def get_content(self, project, taskid, fields={'taskid', 'project', 'url'}, table_name='crawler_content_result_record'):
-        time.sleep(0.2)
         self.table.name = self._tablename(table_name)
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
         try:
@@ -328,7 +328,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             return None
 
     def clean(self, project, group):
-        if group == 'self_crawler':
+        if group == 'self_crawler' or group == 'temp_crawler':
             self.table.name = "crawler_content_result_record"
             return self.engine.execute(self.table.delete()
                                        .where(self.table.c.project == project))

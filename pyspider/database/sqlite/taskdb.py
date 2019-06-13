@@ -29,10 +29,9 @@ class TaskDB(SQLiteMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         tablename = self._tablename(project)
         self._execute('''CREATE TABLE IF NOT EXISTS `%s` (
                 taskid PRIMARY KEY,
-                project,
-                url, status,
+                project, url, status,
                 schedule, fetch, process, track,
-                lastcrawltime, updatetime, skip_fetcher
+                lastcrawltime, updatetime, skip_fetcher, use_proxy
                 )''' % tablename)
         self._execute(
             '''CREATE INDEX `status_%s_index` ON %s (status)'''

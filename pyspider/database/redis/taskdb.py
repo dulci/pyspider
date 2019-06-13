@@ -50,7 +50,7 @@ class TaskDB(BaseTaskDB):
                     data[each] = json.loads(data[each])
                 else:
                     data[each] = {}
-        if 'status' in data:
+        if 'status' in data and data['status']:
             data['status'] = int(data['status'])
         if 'lastcrawltime' in data:
             data['lastcrawltime'] = float(data['lastcrawltime'] or 0)
@@ -64,6 +64,8 @@ class TaskDB(BaseTaskDB):
                 data[each] = json.dumps(data[each])
         if data.get('skip_fetcher') is not None:
             data['skip_fetcher'] = str(data['skip_fetcher'])
+        if data.get('use_proxy') is not None:
+            data['use_proxy'] = str(data['use_proxy'])
         return data
 
     @property
@@ -178,3 +180,6 @@ class TaskDB(BaseTaskDB):
 
     def clean(self, project):
         self.drop(project)
+
+    def drop_task(self, project, taskid):
+        self.redis.delete(self._gen_key(project, taskid))

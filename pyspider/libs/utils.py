@@ -470,22 +470,24 @@ def get_db(db_str):
     db_obj.update({'db': Get(lambda: connect_database(db_str))})
     return db_obj.db
 
-def is_all_url_exists(db_str, project, url_list):
-    db = get_db(db_str)
+def is_all_url_exists(response, url_list):
+    task_db = get_db(response.config['taskdb'])
+    result_db = get_db(response.config['resultdb'])
     all_exists = True
     for index in range(len(url_list)-1, -1, -1):
-        if not db.get_task(project, md5string(url_list[index])):
+        group = response.group if response.group else 'self_crawler'
+        if not task_db.get_task(response.project, md5string(url_list[index])) and not [result for result in result_db.select(response.project, group, taskid=md5string(url_list[index]), fields=['taskid'])]:
             all_exists = False
             continue
-        url_list.pop(index)  
+        url_list.pop(index)
     return all_exists
 
-def is_need_to_paging(db_str, project, url_list, sequence=None, can_page_num=None):
-    all_exists = is_all_url_exists(db_str, project, url_list)
-    logging.info("is_need_to_paging projcect=%s, all_exists=%s, sequence=%s, can_page_num=%s"%(project, all_exists, sequence, can_page_num))
-    if can_page_num is not None and int(can_page_num) == 0:
+def is_need_to_paging(response, url_list):
+    all_exists = is_all_url_exists(response, url_list)
+    logging.info("is_need_to_paging projcect=%s, all_exists=%s, sequence=%s, can_page_num=%s"%(response.project, all_exists, response.sequence, response.page_num))
+    if response.page_num is not None and int(response.page_num) == 0:
         return False
-    if sequence:
+    if response.sequence:
         return True
     return not all_exists
     

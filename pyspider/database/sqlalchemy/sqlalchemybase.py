@@ -7,7 +7,6 @@
 
 import time
 
-
 def result2dict(columns, task):
     r = {}
     for key in task.keys():

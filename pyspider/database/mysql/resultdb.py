@@ -41,7 +41,8 @@ class ResultDB(MySQLMixin, SplitTableMixin, BaseResultDB, BaseDB):
             `url` varchar(1024),
             `result` MEDIUMBLOB,
             `updatetime` double(16, 4),
-            `skip_fetcher` int(11)
+            `skip_fetcher` int(11),
+            `use_proxy` int(11)
             ) ENGINE=InnoDB CHARSET=utf8''' % self.escape(tablename))
 
     def _parse(self, data):
