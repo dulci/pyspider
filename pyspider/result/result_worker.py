@@ -13,6 +13,7 @@ import logging
 import datetime
 from six.moves import queue as Queue
 from pyspider.libs.utils import md5string
+import re
 logger = logging.getLogger("result")
 
 
@@ -59,6 +60,8 @@ class ResultWorker(object):
             try:
                 logger.info('result %s:%s %s -> %.30r' % (
                     task['project'], task['taskid'], task['url'], result))
+                geTaskIdUrl = re.sub(r';jsessionid=[0-9A-Za-z]{1,32}', '', task['url'])
+                geTaskIdUrl = re.sub(r'\?pa=[0-9]{0,8}$', '', geTaskIdUrl)
                 result_content = dict()
                 if task['group'] == 'self_crawler':
                     result_content['taskid'] = task['taskid']
@@ -68,7 +71,7 @@ class ResultWorker(object):
                     result_content['jhycontent'] = str(result['jhycontent'])
                     result_content['currentTime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     result_content['publishTime'] = result['publishTime']
-                    result_content['link'] = task['url']
+                    result_content['link'] = geTaskIdUrl
                     result_content['jhytitle'] = result['title']
                     result_content['taskName'] = result['taskName']
                     result_content['contentTitle'] = result['contentTitle']
@@ -77,7 +80,7 @@ class ResultWorker(object):
                 res = self.resultdb.save(
                     project=task['project'],
                     taskid=task['taskid'],
-                    url=task['url'],
+                    url=geTaskIdUrl,
                     result=result,
                     group=task['group'])
                 if task['group'] == 'self_crawler':
