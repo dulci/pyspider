@@ -111,6 +111,7 @@ class Processor(object):
             updatetime = task.get('project_updatetime', None)
             md5sum = task.get('project_md5sum', None)
             project_data = self.project_manager.get(project, updatetime, md5sum)
+            logger.debug('processer for task:%s'%(task['taskid']))
             assert project_data, "no such project!"
             if project_data.get('exception'):
                 ret = ProcessorResult(logs=(project_data.get('exception_log'), ),
