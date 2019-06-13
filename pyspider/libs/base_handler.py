@@ -22,8 +22,8 @@ from pyspider.libs.ListIO import ListO
 from pyspider.libs.response import rebuild_response
 from pyspider.libs.pprint import pprint
 from pyspider.processor import ProcessorResult
-
-
+import logging
+logger = logging.getLogger('fetcher')
 def catch_status_code_error(func):
     """
     Non-200 response will been regarded as fetch failed and will not pass to callback.
@@ -353,6 +353,8 @@ class BaseHandler(object):
         if cache_key not in self._follows_keys:
             self._follows_keys.add(cache_key)
             self._follows.append(task)
+        else:
+            logger.debug("task already exists task is %s"%(task))
         return task
 
     def get_taskid(self, task):

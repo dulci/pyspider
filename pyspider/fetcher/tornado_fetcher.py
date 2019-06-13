@@ -936,6 +936,7 @@ class Fetcher(object):
                     if self.http_client.free_size() <= 0:
                         break
                     task = self.inqueue.get_nowait()
+                    logger.debug('fetch get task is %s'%(task))
                     #过载保护直接忽略此任务，并记录过载保护状态
                     if self.fetcherrorprojectdb:
                         if self.fetcherrorprojectdb.is_fetch_error(task.get('project')):

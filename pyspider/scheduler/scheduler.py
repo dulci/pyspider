@@ -402,7 +402,7 @@ class Scheduler(object):
                 out_queue = self.out_queues[0]
             else:
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
-            logger.debug("task %s:%s, fetch_type is %s, queque_name is %s"%(task['project'], task['taskid'], task.get('fetch', {}).get('fetch_type'), out_queue.name))
+            logger.debug('schedule to fetcher task is %s'%(task))
             out_queue.put_nowait(task)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
@@ -462,6 +462,7 @@ class Scheduler(object):
         while len(tasks) < self.LOOP_LIMIT:
             try:
                 task = self.newtask_queue.get_nowait()
+                logger.debug('scheduler get task is %s'%(task))
             except Queue.Empty:
                 break
 
@@ -767,28 +768,28 @@ class Scheduler(object):
     def run_once(self):
         '''comsume queues and feed tasks to fetcher, once'''
 
-        logger.debug("scheduler begin update projects")
+        # logger.debug("scheduler begin update projects")
         self._update_projects()
-        logger.debug("scheduler end update projects")
-        logger.debug("scheduler begin check task done")
+        # logger.debug("scheduler end update projects")
+        # logger.debug("scheduler begin check task done")
         self._check_task_done()
-        logger.debug("scheduler end check task done")
-        logger.debug("scheduler begin check request")
+        # logger.debug("scheduler end check task done")
+        # logger.debug("scheduler begin check request")
         self._check_request()
-        logger.debug("scheduler end check request")
-        logger.debug("scheduler begin check cronjob")
+        # logger.debug("scheduler end check request")
+        # logger.debug("scheduler begin check cronjob")
         while self._check_cronjob():
             pass
-        logger.debug("scheduler end check cronjob")
-        logger.debug("scheduler begin check select")
+        # logger.debug("scheduler end check cronjob")
+        # logger.debug("scheduler begin check select")
         self._check_select()
-        logger.debug("scheduler end check select")
-        logger.debug("scheduler begin check delete")
+        # logger.debug("scheduler end check select")
+        # logger.debug("scheduler begin check delete")
         self._check_delete()
-        logger.debug("scheduler end check delete")
-        logger.debug("scheduler begin try dump cnt")
+        # logger.debug("scheduler end check delete")
+        # logger.debug("scheduler begin try dump cnt")
         self._try_dump_cnt()
-        logger.debug("scheduler end try dump cnt")
+        # logger.debug("scheduler end try dump cnt")
 
     def run(self):
         '''Start scheduler loop'''
