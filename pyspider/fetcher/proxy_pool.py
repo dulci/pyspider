@@ -66,7 +66,7 @@ class ProxyPool(object):
     def complain(self, proxy):
         pos = self.proxypooldb.getPos(proxy)
         if pos:
-            self.proxypooldb.complain(pos)
+            self.proxypooldb.complain(pos, self.lifetime)
             if self.proxypooldb.getReputation(pos) < (self.fire_num - 2*self.fire_num):
                 self.proxypooldb.deleteIndex(pos)
 

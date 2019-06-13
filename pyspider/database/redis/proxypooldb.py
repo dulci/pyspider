@@ -43,19 +43,19 @@ class Proxypooldb(object):
         else:
             return None
 
-    def complain(self, pos):
+    def complain(self, pos, lifetime):
         reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
         if reputation is None:
-            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), -1)
+            self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, -1)
         else:
-            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), str(int(reputation) - 1))
+            self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, str(int(reputation) - 1))
 
-    def encourage(self, pos):
+    def encourage(self, pos, lifetime):
         reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
         if reputation is None:
-            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), 1)
+            self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, 1)
         else:
-            self.redis.set(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), str(int(reputation) + 1))
+            self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, str(int(reputation) + 1))
 
     def getReputation(self, pos):
         reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
