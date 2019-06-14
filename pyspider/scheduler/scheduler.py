@@ -341,11 +341,14 @@ class Scheduler(object):
             fetch = None
             if task.get('fetch') is not None:
                 fetch = task['fetch']
-            processes = self.processdb.select(project=task['project'], taskid=task['taskid'])
+            processes = [x for x in self.processdb.select(project=task['project'], taskid=task['taskid'])]
             for process in processes:
-                if process is not None:
+                callback = process.get('process', {}).get('callback')
+                if callback == 'detail_page':
                     return
-            self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
+                self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=1)
+            if len(processes) == 0:
+                self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
         return self.taskdb.insert(task['project'], task['taskid'], task)
 
     def update_task(self, task):

@@ -48,7 +48,7 @@ def restart_allwork():
     url = request.args.get('url')
     status = request.args.get('status')
     type = int(request.args.get('type', 3))
-    task_results = list(processdb.select(project, group, taskid=taskid, url=url, status=status, type=type))
+    task_results = list(processdb.select(project, taskid, group=group, url=url, status=status, type=type))
     try:
         for result in task_results:
             task = dict()
