@@ -77,6 +77,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
                            Column('group', String(100)),
                            Column('result', LargeBinary),
                            Column('updatetime', Float(32)),
+                           Column('upload_status', String(16)),
                            mysql_engine='InnoDB',
                            mysql_charset='utf8'
                            )
