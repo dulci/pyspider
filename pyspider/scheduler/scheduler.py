@@ -956,6 +956,7 @@ class Scheduler(object):
         oldtask = self.taskdb.get_task(task['project'], task['taskid'],
                                        fields=self.merge_task_fields)
         if oldtask:
+            logger.debug('is old_task ')
             return self.on_old_request(task, oldtask)
         else:
             return self.on_new_request(task)
