@@ -77,6 +77,9 @@ class ResultWorker(object):
                     result_content['contentTitle'] = result['contentTitle']
                     result_content['crawlerTeamId'] = result['crawlerTeamId']
                     result = result_content
+                if task['group'] != 'self_crawler':
+                    if result["title"] == None or result["title"].strip() == '':
+                        return
                 res = self.resultdb.save(
                     project=task['project'],
                     taskid=task['taskid'],
