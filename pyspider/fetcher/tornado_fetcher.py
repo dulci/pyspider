@@ -219,9 +219,9 @@ class Fetcher(object):
         callback(type, task, result)
         self.on_result(type, task, result)
         if self.fetcherrorprojectdb:
-            if result.get('status_code') and result['status_code'] != 200:
+            if result.get('status_code') and result['status_code'] != 200 and result['status_code'] != 304:
                 self.fetcherrorprojectdb.set_error(task['project'], task['taskid'])
-            elif result['status_code'] == 200 and re.search('^[0-9a-zA-Z]+$', task['taskid']):
+            elif (result['status_code'] == 200 or result['status_code'] == 304) and re.search('^[0-9a-zA-Z]+$', task['taskid']):
                 self.fetcherrorprojectdb.drop(task['project'])
         raise gen.Return(result)
 
