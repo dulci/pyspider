@@ -26,7 +26,11 @@ def task(taskid):
     resultdb = app.config['resultdb']
     result = {}
     if resultdb:
-        result = resultdb.get(project, taskid)
+        if isinstance(task, dict) and task.get('group') and task.get('group') ==  'self_crawler':
+            table_name = 'crawler_content_result_record'
+        else:
+            table_name = 'crawler_result_record'
+        result = resultdb.get(project, taskid, table_name=table_name)
 
     return render_template("task.html", task=task, json=json, result=result,
                            status_to_string=app.config['taskdb'].status_to_string)
