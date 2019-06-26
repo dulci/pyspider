@@ -23,9 +23,17 @@ class Proxypooldb(object):
     __PROXY_KEY__ = "proxy."
     __INDEX_KEY__ = "index."
     __LOCK_KEY__ = "lock"
+    __HTTPS_PREFIX__ = "pyspider.proxypool.https."
+    __HTTPS_POS_KEY__ = "position.https"
+    __HTTPS_REPUTATION_KEY__ = "reputation.https."
+    __HTTPS_PROXY_KEY__ = "proxy.https."
+    __HTTPS_INDEX_KEY__ = "index.https."
+    __HTTPS_LOCK_KEY__ = "lock.https"
+
 
     def __init__(self, host='127.0.0.1', port=6379, password=None, db=0):
         self.redis = redis.StrictRedis(host=host, port=port, password=password, db=db)
+        self.lock = dict()
         try:
             self.redis.scan(count=1)
             self.scan_available = True
@@ -33,58 +41,58 @@ class Proxypooldb(object):
             logging.debug("redis_scan disabled: %r", e)
             self.scan_available = False
 
-    def newPos(self):
-        return self.redis.incr(self.__PREFIX__ + self.__POS_KEY__)
+    def newPos(self, protocol='http'):
+        return self.redis.incr(self.__prefix(protocol) + self.__pos_key(protocol))
 
-    def getMaxPos(self):
-        maxpos = self.redis.get(self.__PREFIX__ + self.__POS_KEY__)
+    def getMaxPos(self, protocol='http'):
+        maxpos = self.redis.get(self.__prefix(protocol) + self.__pos_key(protocol))
         if maxpos is not None:
             return int(maxpos)
         else:
             return None
 
-    def complain(self, pos, lifetime):
-        reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
+    def complain(self, pos, lifetime, protocol='http'):
+        reputation = self.redis.get(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos))
         if reputation is None:
-            self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, -1)
+            self.redis.setex(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos), lifetime, -1)
         else:
-            self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, str(int(reputation) - 1))
+            self.redis.setex(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos), lifetime, str(int(reputation) - 1))
 
-    def encourage(self, pos, lifetime):
-        reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
+    def encourage(self, pos, lifetime, protocol='http'):
+        reputation = self.redis.get(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos))
         if reputation is None:
-            self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, 1)
+            self.redis.setex(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos), lifetime, 1)
         else:
-            self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, str(int(reputation) + 1))
+            self.redis.setex(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos), lifetime, str(int(reputation) + 1))
 
-    def getReputation(self, pos):
-        reputation = self.redis.get(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
+    def getReputation(self, pos, protocol='http'):
+        reputation = self.redis.get(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos))
         if reputation is None:
             return 0
         else:
             return int(reputation)
 
-    def getProxy(self, pos):
-        proxy = self.redis.get(self.__PREFIX__ + self.__PROXY_KEY__ + str(pos))
+    def getProxy(self, pos, protocol='http'):
+        proxy = self.redis.get(self.__prefix(protocol) + self.__proxy_key(protocol) + str(pos))
         if proxy is not None:
             return str(proxy, 'utf-8')
         else:
             return None
 
-    def addProxy(self, pos, proxy, lifetime):
-        self.redis.setex(self.__PREFIX__ + self.__PROXY_KEY__ + str(pos), lifetime, proxy)
+    def addProxy(self, pos, proxy, lifetime, protocol='http'):
+        self.redis.setex(self.__prefix(protocol) + self.__proxy_key(protocol) + str(pos), lifetime, proxy)
 
-    def addReputation(self, pos, lifetime):
-        self.redis.setex(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos), lifetime, str(0))
+    def addReputation(self, pos, lifetime, protocol='http'):
+        self.redis.setex(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos), lifetime, str(0))
 
-    def deleteProxy(self, pos):
-        self.redis.delete(self.__PREFIX__ + self.__PROXY_KEY__ + str(pos))
+    def deleteProxy(self, pos, protocol='http'):
+        self.redis.delete(self.__prefix(protocol) + self.__proxy_key(protocol) + str(pos))
 
-    def deleteReputation(self, pos):
-        self.redis.delete(self.__PREFIX__ + self.__REPUTATION_KEY__ + str(pos))
+    def deleteReputation(self, pos, protocol='http'):
+        self.redis.delete(self.__prefix(protocol) + self.__reputation_key(protocol) + str(pos))
 
-    def getPoolSize(self):
-        return len(self.getIndexes())
+    def getPoolSize(self, protocol='http'):
+        return len(self.getIndexes(protocol))
 
     def getIndex(self, key):
         index = self.redis.get(key)
@@ -93,40 +101,76 @@ class Proxypooldb(object):
         else:
             return None
 
-    def addIndex(self, pos, lifetime):
-        self.redis.setex(self.__PREFIX__ + self.__INDEX_KEY__ + str(pos), lifetime, str(pos))
+    def addIndex(self, pos, lifetime, protocol='http'):
+        self.redis.setex(self.__prefix(protocol) + self.__index_key(protocol) + str(pos), lifetime, str(pos))
 
-    def deleteIndex(self, pos):
-        self.redis.delete(self.__PREFIX__ + self.__INDEX_KEY__ + str(pos))
-        self.deleteProxy(pos)
-        self.deleteReputation(pos)
+    def deleteIndex(self, pos, protocol='http'):
+        self.redis.delete(self.__prefix(protocol) + self.__index_key(protocol) + str(pos))
+        self.deleteProxy(pos, protocol)
+        self.deleteReputation(pos, protocol)
 
-    def getIndexes(self):
-        indexes = self.redis.keys(self.__PREFIX__ + self.__INDEX_KEY__ + "*")
+    def getIndexes(self, protocol='http'):
+        indexes = self.redis.keys(self.__prefix(protocol) + self.__index_key(protocol) + "*")
         indexes.sort()
         return indexes
 
-    def getReputations(self):
-        indexes = self.redis.keys(self.__PREFIX__ + self.__REPUTATION_KEY__ + "*")
+    def getReputations(self, protocol='http'):
+        indexes = self.redis.keys(self.__prefix(protocol) + self.__reputation_key(protocol) + "*")
         indexes.sort()
         return indexes
 
-    def getMaxReputation(self):
-        indexes = self.getReputations()
+    def getMaxReputation(self, protocol='http'):
+        indexes = self.getReputations(protocol)
         for reputation in sorted(indexes, key=lambda index: int(self.redis.get(index)), reverse=True):
-            if self.redis.keys(self.__PREFIX__ + self.__INDEX_KEY__ + reputation.decode('utf-8').split('.')[-1]):
+            if self.redis.keys(self.__prefix(protocol) + self.__index_key(protocol) + reputation.decode('utf-8').split('.')[-1]):
                 return reputation
 
-    def lockPool(self):
-        self.lock = self.redis.lock(self.__PREFIX__ + self.__LOCK_KEY__, timeout=15, sleep=1, blocking_timeout=5, thread_local=False)
-        return self.lock.acquire()
+    def lockPool(self, protocol='http'):
+        self.lock[protocol] = self.redis.lock(self.__prefix(protocol) + self.__lock_key(protocol), timeout=15, sleep=1, blocking_timeout=5, thread_local=False)
+        return self.lock[protocol].acquire()
 
-    def releasePool(self):
-        if self.lock is not None:
-            self.lock.release()
-            self.lock = None
+    def releasePool(self, protocol='http'):
+        if self.lock[protocol] is not None:
+            self.lock[protocol].release()
+            self.lock[protocol] = None
 
-    def getPos(self, proxy):
-        index = [x for x in self.redis.keys(self.__PREFIX__ + self.__PROXY_KEY__ + '*') if self.redis.get(x).decode('utf-8') == proxy]
+    def getPos(self, proxy, protocol='http'):
+        index = [x for x in self.redis.keys(self.__prefix(protocol) + self.__proxy_key(protocol) + '*') if self.redis.get(x).decode('utf-8') == proxy]
         if index:
             return int(index[0].decode('utf-8').split('.')[-1])
+
+    def __prefix(self, protocol='http'):
+        if 'http' == protocol:
+            return self.__PREFIX__
+        elif 'https' == protocol:
+            return self.__HTTPS_PREFIX__
+
+    def __pos_key(self, protocol='http'):
+        if 'http' == protocol:
+            return self.__POS_KEY__
+        elif 'https' == protocol:
+            return self.__HTTPS_POS_KEY__
+
+    def __reputation_key(self, protocol='http'):
+        if 'http' == protocol:
+            return self.__REPUTATION_KEY__
+        elif 'https' == protocol:
+            return self.__HTTPS_REPUTATION_KEY__
+
+    def __proxy_key(self, protocol='http'):
+        if 'http' == protocol:
+            return self.__PROXY_KEY__
+        elif 'https' == protocol:
+            return self.__HTTPS_PROXY_KEY__
+
+    def __index_key(self, protocol='http'):
+        if 'http' == protocol:
+            return self.__INDEX_KEY__
+        elif 'https' == protocol:
+            return self.__INDEX_KEY__
+
+    def __lock_key(self, protocol='http'):
+        if 'http' == protocol:
+            return self.__LOCK_KEY__
+        elif 'https' == protocol:
+            return self.__HTTPS_LOCK_KEY__

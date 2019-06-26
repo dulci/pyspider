@@ -202,17 +202,18 @@ class Fetcher(object):
         if retry_times is not None:
             return result
         if (task.get('fetch', {}).get('proxy') or task.get('fetch', {}).get('proxy_host')) and result.get('status_code') != 200 and retry_times is None:
+            protocol = re.search('https?:', url).group()[:-1]
             proxy = task.get('fetch', {}).get('proxy')[7:-1] if task.get('fetch', {}).get('proxy') else '%s:%s'%(task.get('fetch', {}).get('proxy_host'), task.get('fetch', {}).get('proxy_port'))
             if result.get('status_code') == 599:
-                self.proxypool.complain(proxy)
+                self.proxypool.complain(proxy, protocol)
                 for index in range(self.proxy_retry_times):
-                    task['fetch'].update(self.pack_proxy_parameters(self.proxypooldb.getPos(proxy)))
+                    task['fetch'].update(self.pack_proxy_parameters(self.proxypooldb.getPos(proxy, protocol)))
                     proxy = task.get('fetch', {}).get('proxy')[7:-1] if task.get('fetch', {}).get('proxy') else '%s:%s'%(task.get('fetch', {}).get('proxy_host'), task.get('fetch', {}).get('proxy_port'))
                     result = yield self.async_fetch(task, callback, index)
                     if result.get('status_code') == 200:
                         break
                     elif result.get('status_code') == 599:
-                        self.proxypool.complain(proxy)
+                        self.proxypool.complain(proxy, protocol)
         if task.get('fetch', {}).get('headers') and isinstance(task.get('fetch', {})['headers'], tornado.httputil.HTTPHeaders):
             task.get('fetch', {})['headers'] = task.get('fetch', {})['headers']._dict
 
@@ -291,12 +292,12 @@ class Fetcher(object):
 
     allowed_options = ['method', 'data', 'connect_timeout', 'timeout', 'cookies', 'use_gzip', 'validate_cert']
 
-    def pack_proxy_parameters(self, pos):
+    def pack_proxy_parameters(self, pos, protocol='http'):
         fetch = dict()
-        proxy_string = self.proxypool.getProxy(pos)
+        proxy_string = self.proxypool.getProxy(pos, protocol)
         if proxy_string:
             if '://' not in proxy_string:
-                proxy_string = 'http://' + proxy_string
+                proxy_string = '%s://%s'%(protocol, proxy_string)
             proxy_splited = urlsplit(proxy_string)
             fetch['proxy_host'] = proxy_splited.hostname
             if proxy_splited.username:
@@ -338,11 +339,12 @@ class Fetcher(object):
 
         if task.get('use_proxy') is not None and str(task.get('use_proxy')).lower() == 'true' and self.proxypool is not None:
             # TODO 遍历获取
-            proxy_string = self.proxypool.getProxy() if not proxy_string else proxy_string
+            protocol = re.search('https?:', url).group()[:-1]
+            proxy_string = self.proxypool.getProxy(protocol=protocol) if not proxy_string else proxy_string
 
         if proxy_string:
             if '://' not in proxy_string:
-                proxy_string = 'http://' + proxy_string
+                proxy_string = '%s://%s'%(re.search('https?:', url).group()[:-1], proxy_string)
             proxy_splited = urlsplit(proxy_string)
             fetch['proxy_host'] = proxy_splited.hostname
             if proxy_splited.username:
