@@ -180,7 +180,7 @@ class Response(object):
         if not hasattr(self, '_fullelements'):
             try:
                 parser = lxml.html.HTMLParser(encoding=self.encoding)
-                text = str(self.text).replace("</html>", "") + "</html>"
+                text = "<html>" + re.sub('</?html[\s\S]*?>', '', self.text) + "</html>"
                 self._fullelements = lxml.html.fromstring(text, parser=parser)
             except LookupError:
                 # lxml would raise LookupError when encoding not supported
