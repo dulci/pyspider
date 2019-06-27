@@ -27,23 +27,25 @@ class FailTaskRetry(object):
         suspected_fail_status = '1,2,4,11,12,15,21,22,31'
         limit = 1000
         for group in self.groups:
-            fail_count = self.processdb.count(None, group, status=fail_status, type=3)
+            # fail_count = self.processdb.count(None, group, status=fail_status, type=3)
+            fail_count = self.processdb.count(None, group, status=fail_status, type=[3,2,9])
             logger.info('fail task num is %d'%(fail_count))
             pages = math.ceil(fail_count/limit)
             for page in range(pages):
                 out_queue = sorted(self.queues, key=lambda x: x.qsize())[0]
-                fail_task_results = list(self.processdb.select(None, None, group=group, url='', status=fail_status, type=3, limit=limit, offset=page*limit))
+                # fail_task_results = list(self.processdb.select(None, None, group=group, url='', status=fail_status, type=3, limit=limit, offset=page*limit))
+                fail_task_results = list(self.processdb.select(None, None, group=group, url='', status=fail_status, type=[3,2,9], limit=limit, offset=page * limit))
                 for fail_task in fail_task_results:
                     task = self._put_fail_task_agin(fail_task)
                     if task:
                         out_queue.put(task)
                         logger.info('fail task:%s:%s is restart' % (task['project'], task['taskid']))
-            suspected_fail_count = self.processdb.count(None, group, status=suspected_fail_status, type=3)
+            suspected_fail_count = self.processdb.count(None, group, status=suspected_fail_status, type=[3,2,9])
             logger.info('suspected fail task num is %d' % (suspected_fail_count))
             pages = math.ceil(suspected_fail_count/limit)
             for page in range(pages):
                 out_queue = sorted(self.queues, key=lambda x: x.qsize())[0]
-                suspected_fail_results = list(self.processdb.select(None, None, group=group, url='', status=suspected_fail_status, type=3, limit=limit, offset=page*limit))
+                suspected_fail_results = list(self.processdb.select(None, None, group=group, url='', status=suspected_fail_status, type=[3,2,9], limit=limit, offset=page*limit))
                 for suspected_fail_task in suspected_fail_results:
                     task = self._put_fail_task_agin(suspected_fail_task)
                     if task:
@@ -53,14 +55,6 @@ class FailTaskRetry(object):
 
     def _put_fail_task_agin(self, source_task, reset_keys=['taskid','url','project','fetch','process','group']):
         task = dict()
-        # if source_task['status'] == 1 and (time.mktime(source_task['updated_at'].timetuple()) - time.mktime(source_task['created_at'].timetuple())) < 600:
-        #     return
-        # if source_task['status'] == 11 and (time.time() - time.mktime(source_task['fetcher_begin_time'].timetuple())) < 600:
-        #     return
-        # if source_task['status'] == 21 and (time.time() - time.mktime(source_task['processor_begin_time'].timetuple())) < 600:
-        #     return
-        # if source_task['status'] == 31 and (time.time() - time.mktime(source_task['result_worder_begin_time'].timetuple())) < 600:
-        #     return
         if (time.time() - time.mktime(source_task['scheduler_created_time'].timetuple())) < self.RETRY_FAIL_TASK_INTERVAL:
             return
         for key in reset_keys:

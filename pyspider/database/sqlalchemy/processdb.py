@@ -118,7 +118,10 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
             else:
                 whl_con = and_(whl_con, self.table.c.status == status)
         if type is not None and type != 'all':
-            whl_con = and_(whl_con, self.table.c.type == type)
+            if isinstance(type, list):
+                whl_con = and_(whl_con, self.table.c.type.in_(type))
+            else:
+                whl_con = and_(whl_con, self.table.c.type == type)
         for process in self.engine.execute(self.table.select()
                                         .with_only_columns(columns=columns)
                                         .where(whl_con)
@@ -215,7 +218,10 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
             else:
                 whl_con = and_(whl_con, self.table.c.status == status)
         if type is not None and type != 'all':
-            whl_con = and_(whl_con, self.table.c.type == type)
+            if isinstance(type, list):
+                whl_con = and_(whl_con, self.table.c.type.in_(type))
+            else:
+                whl_con = and_(whl_con, self.table.c.type == type)
         for count, in self.engine.execute(self.table.count()
                                                   .where(whl_con)):
             return count
