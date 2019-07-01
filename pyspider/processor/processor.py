@@ -111,7 +111,7 @@ class Processor(object):
             updatetime = task.get('project_updatetime', None)
             md5sum = task.get('project_md5sum', None)
             project_data = self.project_manager.get(project, updatetime, md5sum)
-            logger.debug('processer for task:%s, project is %s'%(task['taskid'], task['project']))
+            #logger.debug('processer for task:%s, project is %s'%(task['taskid'], task['project']))
             assert project_data, "no such project!"
             if project_data.get('exception'):
                 ret = ProcessorResult(logs=(project_data.get('exception_log'), ),
@@ -175,11 +175,11 @@ class Processor(object):
 
         # FIXME: unicode_obj should used in scheduler before store to database
         # it's used here for performance.
-        logger.debug('processer follows is %s'%(ret.follows))
+        #logger.debug('processer follows is %s'%(ret.follows))
         if ret.follows:
             for each in (ret.follows[x:x + 1000] for x in range(0, len(ret.follows), 1000)):
                 self.newtask_queue.put([utils.unicode_obj(newtask) for newtask in each])
-                logger.debug('processer follows one is %s to new task queue' % (each))
+                #logger.debug('processer follows one is %s to new task queue' % (each))
 
         for project, msg, url in ret.messages:
             try:
@@ -220,7 +220,7 @@ class Processor(object):
         while not self._quit:
             try:
                 task, response = self.inqueue.get(timeout=1)
-                logger.debug("processer_start task is %s"%(task))
+                #logger.debug("processer_start task is %s"%(task))
                 if self.processdb is not None:
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=21)
                 self.on_task(task, response)
