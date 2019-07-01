@@ -490,6 +490,19 @@ def is_need_to_paging(response, url_list):
     if response.sequence:
         return True
     return not all_exists
-    
+
+
+def get_host_ip():
+    """
+    查询本机ip地址
+    :return:
+    """
+    try:
+        s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8',80))
+        ip=s.getsockname()[0]
+    finally:
+        s.close()
+    return ip
     
     
