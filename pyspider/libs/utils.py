@@ -491,7 +491,6 @@ def is_need_to_paging(response, url_list):
         return True
     return not all_exists
 
-
 def get_host_ip():
     """
     查询本机ip地址
@@ -504,5 +503,4 @@ def get_host_ip():
     finally:
         s.close()
     return ip
-    
     
