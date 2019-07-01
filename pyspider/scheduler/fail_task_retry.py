@@ -24,7 +24,8 @@ class FailTaskRetry(object):
         if self._last_retry_fail_task_time and self._last_retry_fail_task_time + self.RETRY_FAIL_TASK_INTERVAL > time.time():
             return
         fail_status = '3,13,14,23,33,34,35'
-        suspected_fail_status = '1,2,4,11,12,15,21,22,31'
+        #suspected_fail_status = '1,2,4,11,12,15,21,22,31'
+        suspected_fail_status = '1,11,15,21,31'
         limit = 1000
         for group in self.groups:
             # fail_count = self.processdb.count(None, group, status=fail_status, type=3)
