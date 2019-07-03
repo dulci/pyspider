@@ -366,9 +366,10 @@ def result_worker(ctx, result_cls, get_object=False):
 @click.option('--webui-instance', default='pyspider.webui.app.app', callback=load_cls,
               help='webui Flask Application instance to be used.')
 @click.option('--process-time-limit', default=30, help='script process time limit in debug')
+@click.option('--no-auth-link', default=[])
 @click.pass_context
 def webui(ctx, host, port, cdn, scheduler_rpc, fetcher_rpc, max_rate, max_burst,
-          username, password, need_auth, webui_instance, process_time_limit, get_object=False):
+          username, password, need_auth, webui_instance, process_time_limit, no_auth_link, get_object=False):
     """
     Run WebUI
     """
@@ -381,6 +382,7 @@ def webui(ctx, host, port, cdn, scheduler_rpc, fetcher_rpc, max_rate, max_burst,
     app.config['processdb'] = g.processdb
     app.config['fetcherrorprojectdb'] = g.fetcherrorprojectdb
     app.config['cdn'] = cdn
+    app.config['no_auth_link'] = no_auth_link
 
     if max_rate:
         app.config['max_rate'] = max_rate

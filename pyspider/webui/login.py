@@ -12,6 +12,7 @@ try:
 except ImportError:
     from flask.ext import login
 from .app import app
+from flask import request
 
 login_manager = login.LoginManager()
 login_manager.init_app(app)
@@ -73,5 +74,11 @@ app.login_response = Response(
 @app.before_request
 def before_request():
     if app.config.get('need_auth', False):
-        if not login.current_user.is_active():
+        tag = True
+        if app.config.get('no_auth_link') is not None and app.config.get('no_auth_link') != '':
+            for url in app.config.get('no_auth_link'):
+                if url == request.path:
+                    tag = False
+                    break
+        if not login.current_user.is_active() and tag:
             return app.login_response
