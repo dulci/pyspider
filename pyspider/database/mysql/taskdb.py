@@ -120,12 +120,16 @@ class TaskDB(MySQLMixin, SplitTableMixin, BaseTaskDB, BaseDB):
         if project not in self.projects:
             self._create_project(project)
             self._list_project()
+        taskdb_dict = {'taskid', 'project', 'url', 'status', 'schedule', 'fetch', 'process', 'track', 'lastcrawltime', 'updatetime', 'group'}
         obj = dict(obj)
-        obj['taskid'] = taskid
-        obj['project'] = project
-        obj['updatetime'] = time.time()
+        new_obj = dict()
+        for key in taskdb_dict:
+            new_obj[key] = obj.get(key)
+        new_obj['taskid'] = taskid
+        new_obj['project'] = project
+        new_obj['updatetime'] = time.time()
         tablename = self._tablename(project)
-        return self._insert(tablename, **self._stringify(obj))
+        return self._insert(tablename, **self._stringify(new_obj))
 
     def update(self, project, taskid, obj={}, **kwargs):
         time.sleep(0.2)

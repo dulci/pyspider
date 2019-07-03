@@ -12,6 +12,7 @@ from flask import Response
 from .app import app
 from pyspider.libs import process_dump
 import time
+from pyspider.libs.base_handler import BaseHandler
 
 
 @app.route('/process')
@@ -71,8 +72,67 @@ def restart_allwork():
     except Exception as e:
         return json.dumps({"error": e}), 404, {'Content-Type': 'application/json'}
 
-
-
+@app.route('/recrawler')
+def recrawler_bid():
+    processdb = app.config['processdb']
+    taskdb = app.config['taskdb']
+    # 根据project_name、callback取最新的一条数据
+    project = request.args.get('project')
+    publish_date = request.args.get('publish_date')
+    title = request.args.get('title')
+    url = request.args.get('url')
+    process = request.args.get('process')
+    group = request.args.get('group')
+    if group is None or group == '':
+        group = 'self_crawler'
+    if process is None or process == '':
+        process = '{"callback": "detail_back"}'
+    taskid = BaseHandler().get_taskid(url)
+    is_old = True
+    task_results = list(processdb.select(project, taskid, group=group))
+    if len(task_results) < 1:
+        task_results = list(processdb.select_recrawler(project, process, group=group))
+        is_old = False
+    # 更新fetch
+    try:
+        for task_result in task_results:
+            task = dict()
+            if is_old:
+                task['taskid'] = task_result['taskid']
+                task['url'] = task_result['url']
+                task['project'] = task_result['project']
+                task['fetch'] = task_result['fetch']
+                task['process'] = task_result['process']
+                task['group'] = task_result['group']
+                schedule = {'force_update': True, 'age': 0}
+                task['schedule'] = schedule
+                task['status'] = 1
+                task['track'] = {}
+                task['lastcrawltime'] = None
+                task['type'] = 1
+                task['project_updatetime'] = time.time()
+                app.config['queues']['scheduler2fetcher'].put(task)
+            else:
+                task_result['fetch']['save'] = {"title": title, "publish_date": publish_date}
+                task['taskid'] = taskid
+                task['url'] = url
+                task['project'] = project
+                task['fetch'] = task_result['fetch']
+                task['process'] = task_result['process']
+                task['group'] = group
+                task['schedule'] = {'force_update': True, 'age': 0}
+                task['status'] = 1
+                task['track'] = {}
+                task['lastcrawltime'] = None
+                task['type'] = 1
+                task['project_updatetime'] = time.time()
+                # app.config['status_queue'].put(json.dumps({'taskid': '_on_get_info', 'project': 'test_project', 'track': {'save': {}}}))
+                processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=task['fetch'], url=task['url'])
+                taskdb.insert(task['project'], task['taskid'], task)
+                app.config['queues']['scheduler2fetcher'].put(task)
+        return json.dumps({"status": "success"}), 200, {'Content-Type': 'application/json'}
+    except Exception as e:
+        return json.dumps({"error": e}), 404, {'Content-Type': 'application/json'}
 
 @app.route('/processes/dump/<project>-<group>.<_format>')
 def dump_processes(project, group, _format):

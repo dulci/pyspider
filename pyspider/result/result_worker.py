@@ -72,9 +72,9 @@ class ResultWorker(object):
                     result_content['currentTime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     result_content['publishTime'] = result['publishTime']
                     result_content['link'] = exeUrl
-                    result_content['jhytitle'] = result['title']
+                    result_content['jhytitle'] = result['title'].strip()
                     result_content['taskName'] = result['taskName']
-                    result_content['contentTitle'] = result['contentTitle']
+                    result_content['contentTitle'] = result['contentTitle'].strip()
                     result_content['crawlerTeamId'] = result['crawlerTeamId']
                     result = result_content
                 if task['group'] != 'self_crawler':

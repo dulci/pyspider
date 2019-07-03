@@ -337,6 +337,8 @@ class Scheduler(object):
                 pro = self.projectdb.get(task['project'])
                 if pro is not None:
                     group = pro['group']
+            if group is None:
+                group = task['group']
 
             fetch = None
             if task.get('fetch') is not None:

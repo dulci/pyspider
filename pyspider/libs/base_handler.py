@@ -341,7 +341,7 @@ class BaseHandler(object):
         if 'taskid' in kwargs:
             task['taskid'] = kwargs.pop('taskid')
         else:
-            task['taskid'] = self.get_taskid(task)
+            task['taskid'] = self.get_taskid(task['url'])
 
         if kwargs:
             raise TypeError('crawl() got unexpected keyword argument: %s' % kwargs.keys())
@@ -355,9 +355,9 @@ class BaseHandler(object):
             self._follows.append(task)
         return task
 
-    def get_taskid(self, task):
+    def get_taskid(self, url):
         '''Generate taskid by information of task md5(url) by default, override me'''
-        geTaskIdUrl = re.sub(r';jsessionid=[0-9A-Za-z]{1,32}(\.server\d)?', '', task['url'])
+        geTaskIdUrl = re.sub(r';jsessionid=[0-9A-Za-z]{1,32}(\.server\d)?', '', url)
         geTaskIdUrl = re.sub(r'\?pa=[0-9]{0,8}$', '', geTaskIdUrl)
         return md5string(geTaskIdUrl)
 

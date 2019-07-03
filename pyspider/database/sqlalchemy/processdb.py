@@ -129,6 +129,33 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
                                         .execution_options(autocommit=True)):
             yield self._parse(result2dict(columns, process))
 
+    def select_recrawler(self, project, process, group=None, fields=None, status=None):
+        self.table.name = self.__tablename__
+        columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
+        whl_con = and_('1' == '1')
+        if project is not None and project != '':
+            whl_con = and_(whl_con, self.table.c.project == project)
+        if process is not None and process != '':
+            whl_con = and_(whl_con, self.table.c.process == process)
+        if group is not None and group != '':
+            whl_con = and_(whl_con, self.table.c.group == group)
+        if status is not None and status != '':
+            whl_con = and_(whl_con, self.table.c.status == status)
+        else:
+            whl_con = and_(whl_con, self.table.c.status == 32)
+        for execute_i in self.engine.execute(self.table.select()
+                                           .with_only_columns(columns=columns)
+                                           .where(whl_con)
+                                           .order_by(self.table.c.updated_at.desc())
+                                           .offset(0).limit(1)
+                                           .execution_options(autocommit=True)):
+            yield self._parse(result2dict(columns, execute_i))
+
+
+
+
+
+
     def insert(self, project, taskid, group, process, fetch, url, obj={}):
         obj = dict(obj)
         obj['taskid'] = taskid
