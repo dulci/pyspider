@@ -123,7 +123,7 @@ def recrawler_bid():
                 task['schedule'] = {'force_update': True, 'age': 0}
                 task['status'] = 1
                 task['track'] = {}
-                task['lastcrawltime'] = None
+                task['lastcrawltime'] = time.time() - 3600*24
                 task['type'] = 1
                 task['project_updatetime'] = time.time()
                 # app.config['status_queue'].put(json.dumps({'taskid': '_on_get_info', 'project': 'test_project', 'track': {'save': {}}}))
