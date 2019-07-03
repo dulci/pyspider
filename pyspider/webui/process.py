@@ -86,7 +86,7 @@ def recrawler_bid():
     if group is None or group == '':
         group = 'self_crawler'
     if process is None or process == '':
-        process = '{"callback": "detail_back"}'
+        process = '{"callback": "detail_page"}'
     taskid = BaseHandler().get_taskid(url)
     is_old = True
     task_results = list(processdb.select(project, taskid, group=group))
