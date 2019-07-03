@@ -130,7 +130,8 @@ def recrawler_bid():
                 processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=task['fetch'], url=task['url'])
                 taskdb.insert(task['project'], task['taskid'], task)
                 app.config['queues']['scheduler2fetcher'].put(task)
-        return json.dumps({"status": "success"}), 200, {'Content-Type': 'application/json'}
+            return json.dumps({"status": "restart_success"}), 200, {'Content-Type': 'application/json'}
+        return json.dumps({"status": "no_restart_work"}), 200, {'Content-Type': 'application/json'}
     except Exception as e:
         return json.dumps({"error": e}), 404, {'Content-Type': 'application/json'}
 
