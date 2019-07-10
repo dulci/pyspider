@@ -318,7 +318,7 @@ class Scheduler(object):
         # if task['project'] not in self.projects:
         #     logger.error('unknown project: %s', task['project'])
         #     return False
-
+        #
         # project = self.projects[task['project']]
         # if not project.active:
         #     logger.error('project %s not started, please set status to RUNNING or DEBUG',
@@ -407,7 +407,7 @@ class Scheduler(object):
                 out_queue = self.out_queues[0]
             else:
                 out_queue = sorted(self.out_queues, key=lambda x:x.qsize())[0]
-            logger.debug('schedule to fetcher task is %s'%(task))
+            # logger.debug('schedule to fetcher task is %s'%(task))
             out_queue.put_nowait(task)
             if self.processdb is not None:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=2)
@@ -463,11 +463,11 @@ class Scheduler(object):
         # logger.debug("scheduler end check task of postpone request")
 
         tasks = {}
-        logger.debug("scheduler begin get new request task")
+        # logger.debug("scheduler begin get new request task")
         while len(tasks) < self.LOOP_LIMIT:
             try:
                 task = self.newtask_queue.get_nowait()
-                logger.debug('scheduler get task is %s'%(task))
+                # logger.debug('scheduler get task is %s'%(task))
             except Queue.Empty:
                 break
 
@@ -582,8 +582,8 @@ class Scheduler(object):
             if not project.active:
                 continue
             # only check project pause when select new tasks, cronjob and new request still working
-            if project.paused:
-                continue
+            # if project.paused:
+            #     continue
             if project.waiting_get_info:
                 continue
 
@@ -958,7 +958,7 @@ class Scheduler(object):
         oldtask = self.taskdb.get_task(task['project'], task['taskid'],
                                        fields=self.merge_task_fields)
         if oldtask:
-            logger.debug('is old_task ')
+            # logger.debug('is old_task ')
             return self.on_old_request(task, oldtask)
         else:
             return self.on_new_request(task)
@@ -1050,9 +1050,9 @@ class Scheduler(object):
         '''Called when a status pack is arrived'''
         try:
             procesok = task['track']['process']['ok']
-            # if not self.projects[task['project']].task_queue.done(task['taskid']):
-            #     logging.error('not processing pack: %(project)s:%(taskid)s %(url)s', task)
-            #     return None
+            if not self.projects[task['project']].task_queue.done(task['taskid']):
+                logging.error('not processing pack: %(project)s:%(taskid)s %(url)s', task)
+                # return None
         except KeyError as e:
             logger.error("Bad status pack: %s", e)
             return None

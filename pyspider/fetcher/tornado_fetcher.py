@@ -207,7 +207,7 @@ class Fetcher(object):
             if result.get('status_code') == 599:
                 self.proxypool.complain(proxy, protocol)
                 for index in range(self.proxy_retry_times):
-                    task['fetch'].update(self.pack_proxy_parameters(self.proxypooldb.getPos(proxy, protocol)))
+                    task['fetch'].update(self.pack_proxy_parameters(self.proxypooldb.getPos(proxy, protocol), protocol))
                     proxy = task.get('fetch', {}).get('proxy')[7:-1] if task.get('fetch', {}).get('proxy') else '%s:%s'%(task.get('fetch', {}).get('proxy_host'), task.get('fetch', {}).get('proxy_port'))
                     result = yield self.async_fetch(task, callback, index)
                     if result.get('status_code') == 200:
@@ -309,7 +309,7 @@ class Fetcher(object):
                     if key in fetch:
                         fetch[key] = fetch[key].encode('utf8')
             fetch['proxy_port'] = proxy_splited.port or 8080
-            fetch['proxy'] = 'http://%s:%s/'%(fetch['proxy_host'], fetch['proxy_port'])
+            fetch['proxy'] = '%s://%s:%s/'%(protocol, fetch['proxy_host'], fetch['proxy_port'])
         return fetch
 
     def pack_tornado_request_parameters(self, url, task):

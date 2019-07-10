@@ -109,12 +109,13 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
             status_con = None
             status_list = status.split(",")
             if len(status_list) > 1:
-                for i in range(len(status_list)):
-                    if i == 0:
-                        status_con = or_(self.table.c.status == status_list[i])
-                    else:
-                        status_con = or_(status_con, self.table.c.status == status_list[i])
-                whl_con = and_(whl_con, status_con)
+                # for i in range(len(status_list)):
+                #     if i == 0:
+                #         status_con = or_(self.table.c.status == status_list[i])
+                #     else:
+                #         status_con = or_(status_con, self.table.c.status == status_list[i])
+                # whl_con = and_(whl_con, status_con)
+                whl_con = and_(whl_con, self.table.c.status.in_(status_list))
             else:
                 whl_con = and_(whl_con, self.table.c.status == status)
         if type is not None and type != 'all':
@@ -236,12 +237,13 @@ class ProcessDB(SplitTableMixin, BaseProcessDB):
             status_con = None
             status_list = status.split(",")
             if len(status_list) > 1:
-                for i in range(len(status_list)):
-                    if i == 0:
-                        status_con = or_(self.table.c.status == status_list[i])
-                    else:
-                        status_con = or_(status_con, self.table.c.status == status_list[i])
-                whl_con = and_(whl_con, status_con)
+                # for i in range(len(status_list)):
+                #     if i == 0:
+                #         status_con = or_(self.table.c.status == status_list[i])
+                #     else:
+                #         status_con = or_(status_con, self.table.c.status == status_list[i])
+                # whl_con = and_(whl_con, status_con)
+                whl_con = and_(whl_con, self.table.c.status.in_(status_list))
             else:
                 whl_con = and_(whl_con, self.table.c.status == status)
         if type is not None and type != 'all':
