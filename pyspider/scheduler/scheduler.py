@@ -597,7 +597,7 @@ class Scheduler(object):
 
         min_project_limit = int(limit / 10.)  # ensure minimum select limit for each project
         max_project_limit = int(limit / 3.0)  # ensure maximum select limit for each project
-
+        logger.info('all projects task_queque size is %s'%(total_weight))
         # logger.debug("scheduler begin calculate limit of project")
         for pro_name, pro_weight in iteritems(project_weights):
             if cnt >= limit:
@@ -621,6 +621,7 @@ class Scheduler(object):
                     project_limit = max_project_limit
 
             # check send_buffer here. when not empty, out_queue may blocked. Not sending tasks
+            logger.info('project:%s, task_queque priority_queue is %s time_queue is %s processing is %s'%(pro_name, self.projects[pro_name].task_queue.priority_queue.qsize(), self.projects[pro_name].task_queue.time_queue.qsize(), self.projects[pro_name].task_queue.processing.qsize()))
             while cnt < limit and project_cnt < project_limit:
                 taskid = task_queue.get()
                 if not taskid:
@@ -1085,6 +1086,8 @@ class Scheduler(object):
                 self.put_task(task)
             else:
                 del task['schedule']
+                if task.get('track', {}).get('process', {}).get('follows') == 0 or self.taskdb.get_task(task['project'], task['taskid']).get('process').get('callback') !=  'index_page':
+                    self.projects[task['project']].task_queue.delete(task['taskid'])
         self.update_task(task)
 
         project = task['project']
