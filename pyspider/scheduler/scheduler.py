@@ -1051,9 +1051,9 @@ class Scheduler(object):
         '''Called when a status pack is arrived'''
         try:
             procesok = task['track']['process']['ok']
-            # if not self.projects[task['project']].task_queue.done(task['taskid']):
-            #     logging.error('not processing pack: %(project)s:%(taskid)s %(url)s', task)
-                # return None
+            if not self.projects[task['project']].task_queue.done(task['taskid']):
+                logging.error('not processing pack: %(project)s:%(taskid)s %(url)s', task)
+                return None
         except KeyError as e:
             logger.error("Bad status pack: %s", e)
             return None
