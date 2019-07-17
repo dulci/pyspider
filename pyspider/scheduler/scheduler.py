@@ -1089,8 +1089,6 @@ class Scheduler(object):
                 self.put_task(task)
             else:
                 del task['schedule']
-                if task.get('track', {}).get('process', {}).get('follows') == 0 or self.taskdb.get_task(task['project'], task['taskid']).get('process').get('callback') !=  'index_page':
-                    self.projects[task['project']].task_queue.delete(task['taskid'])
         self.update_task(task)
 
         project = task['project']
