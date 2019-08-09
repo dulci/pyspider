@@ -145,7 +145,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         # else:
         #     db_result = self.engine.execute(self.table.insert()
         #                                .values(**self._stringify(obj)))
-        db_result = self._save(tablename, taskid, obj)
+        db_result = self._save(project, taskid, obj, tablename)
         if group == 'self_crawler' or group == 'temp_crawler':
             return db_result
         else:
@@ -200,8 +200,8 @@ class ResultDB(SplitTableMixin, BaseResultDB):
                 }
                 return self.other_table_save(business_miss_monitoring_record, 'url', obj['url'], obj)
 
-    def _save(self, project, taskid, fields):
-        if self.get(project, taskid, ('taskid', ), project):
+    def _save(self, project, taskid, fields, table_name='crawler_result_record'):
+        if self.get(project, taskid, ('taskid', ), table_name):
             del fields['taskid']
             db_result = self.engine.execute(self.table.update()
                                        .where(self.table.c.taskid == taskid)

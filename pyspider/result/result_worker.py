@@ -35,18 +35,18 @@ class ResultWorker(object):
 
     def on_result(self, task, result):
         # repeat check
-        if task['group'] is not None and task['group'] != 'self_crawler':
-            oldTask = self.resultdb.get(task['project'], task['taskid'])
-            if oldTask is not None:
-                logger.info('result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
-                return
-        elif task['group'] is not None and (task['group'] == 'self_crawler' or task['group'] == 'temp_crawler'):
-            oldTask = self.resultdb.get_content(task['project'], task['taskid'])
-            if oldTask is not None:
-                logger.info('result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
-                if self.processdb is not None:
-                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=32)
-                return
+        # if task['group'] is not None and task['group'] != 'self_crawler':
+        #     oldTask = self.resultdb.get(task['project'], task['taskid'])
+        #     if oldTask is not None:
+        #         logger.info('result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+        #         return
+        # elif task['group'] is not None and (task['group'] == 'self_crawler' or task['group'] == 'temp_crawler'):
+        #     oldTask = self.resultdb.get_content(task['project'], task['taskid'])
+        #     if oldTask is not None:
+        #         logger.info('result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+        #         if self.processdb is not None:
+        #             self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=32)
+        #         return
 
         # reset project delay level
         if self.projectcache is not None:
@@ -63,32 +63,32 @@ class ResultWorker(object):
                 exeUrl = re.sub(r';jsessionid=[0-9A-Za-z]{1,32}(\.server\d)?', '', task['url'])
                 exeUrl = re.sub(r'\?pa=[0-9]{0,8}$', '', exeUrl)
                 result_content = dict()
-                if task['group'] == 'self_crawler':
-                    result_content['taskid'] = task['taskid']
-                    result_content['ddid'] = md5string(result['html'])
-                    result_content['type'] = task['project']
-                    result_content['html'] = str(result['html'])
-                    result_content['jhycontent'] = str(result['jhycontent'])
-                    result_content['currentTime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    result_content['publishTime'] = result['publishTime']
-                    result_content['link'] = exeUrl
-                    result_content['jhytitle'] = result['title'].strip()
-                    result_content['taskName'] = result['taskName']
-                    result_content['contentTitle'] = result['contentTitle'].strip()
-                    result_content['crawlerTeamId'] = result['crawlerTeamId']
-                    result = result_content
-                if task['group'] != 'self_crawler':
-                    if result["title"] == None or result["title"].strip() == '':
-                        return
+                # if task['group'] == 'self_crawler':
+                #     result_content['taskid'] = task['taskid']
+                #     result_content['ddid'] = md5string(result['html'])
+                #     result_content['type'] = task['project']
+                #     result_content['html'] = str(result['html'])
+                #     result_content['jhycontent'] = str(result['jhycontent'])
+                #     result_content['currentTime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                #     result_content['publishTime'] = result['publishTime']
+                #     result_content['link'] = exeUrl
+                #     result_content['jhytitle'] = result['title'].strip()
+                #     result_content['taskName'] = result['taskName']
+                #     result_content['contentTitle'] = result['contentTitle'].strip()
+                #     result_content['crawlerTeamId'] = result['crawlerTeamId']
+                #     result = result_content
+                # if task['group'] != 'self_crawler':
+                #     if result["title"] == None or result["title"].strip() == '':
+                #         return
                 res = self.resultdb.save(
                     project=task['project'],
                     taskid=task['taskid'],
                     url=exeUrl,
                     result=result,
                     group=task['group'])
-                if task['group'] == 'self_crawler':
-                    result_content_str = json.dumps(result_content)
-                    self.content_queue.put(result_content_str)
+                # if task['group'] == 'self_crawler':
+                #     result_content_str = json.dumps(result_content)
+                #     self.content_queue.put(result_content_str)
                 if self.processdb is not None:
                     self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=32)
                 return res

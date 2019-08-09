@@ -344,10 +344,11 @@ class Scheduler(object):
             if task.get('fetch') is not None:
                 fetch = task['fetch']
             processes = [x for x in self.processdb.select(project=task['project'], taskid=task['taskid'])]
-            for process in processes:
-                callback = process.get('process', {}).get('callback')
-                if callback == 'detail_page':
-                    return
+            # for process in processes:
+                # callback = process.get('process', {}).get('callback')
+                # if callback == 'detail_page':
+                #     return
+            if len(processes) > 0:
                 self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=1)
             if len(processes) == 0:
                 self.processdb.insert(project=task['project'], taskid=task['taskid'], group=group, process=task['process'], fetch=fetch, url=task['url'])
@@ -376,26 +377,26 @@ class Scheduler(object):
         '''
 
         # repeat check in resultdb
-        if task['group'] is not None and task['group'] != 'self_crawler':
-            oldTask = self.resultdb.get(task['project'], task['taskid'])
-            if oldTask is not None:
-                if self.processdb is not None:
-                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
-                    if not self.projects[task['project']].task_queue.done(task['taskid']):
-                        self.projects[task['project']].task_queue.delete(task['taskid'])
-                    self.on_task_done(task)
-                logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
-                return
-        elif task['group'] is not None and (task['group'] == 'self_crawler' or task['group'] == 'temp_crawler'):
-            oldTask = self.resultdb.get_content(task['project'], task['taskid'])
-            if oldTask is not None:
-                if self.processdb is not None:
-                    if not self.projects[task['project']].task_queue.done(task['taskid']):
-                        self.projects[task['project']].task_queue.delete(task['taskid'])
-                    self.on_task_done(task)
-                    self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
-                logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
-                return
+        # if task['group'] is not None and task['group'] != 'self_crawler':
+        #     oldTask = self.resultdb.get(task['project'], task['taskid'])
+        #     if oldTask is not None:
+        #         if self.processdb is not None:
+        #             self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
+        #             if not self.projects[task['project']].task_queue.done(task['taskid']):
+        #                 self.projects[task['project']].task_queue.delete(task['taskid'])
+        #             self.on_task_done(task)
+        #         logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+        #         return
+        # elif task['group'] is not None and (task['group'] == 'self_crawler' or task['group'] == 'temp_crawler'):
+        #     oldTask = self.resultdb.get_content(task['project'], task['taskid'])
+        #     if oldTask is not None:
+        #         if self.processdb is not None:
+        #             if not self.projects[task['project']].task_queue.done(task['taskid']):
+        #                 self.projects[task['project']].task_queue.delete(task['taskid'])
+        #             self.on_task_done(task)
+        #             self.processdb.update_status(project=task['project'], taskid=task['taskid'], status=4)
+        #         logger.info('abandon task because result %s:%s %s is already existed'%(task['project'], task['taskid'], task['url']))
+        #         return
         try:
             # if task.get('schedule', {}).get('queue_name'):
             #     logger.debug("queue_name is %s"%(task['schedule']['queue_name']))
