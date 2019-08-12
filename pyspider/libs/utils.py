@@ -15,6 +15,7 @@ import warnings
 import threading
 from lxml.html import HtmlElement
 from pyquery import PyQuery
+from pyspider.fetcher.proxy_pool import ProxyPool
 
 from pyspider.database import connect_database
 import re
@@ -503,4 +504,17 @@ def get_host_ip():
     finally:
         s.close()
     return ip
-    
+
+def get_proxy(response):
+    proxy = None
+    proxypooldb = get_db(response.config['proxypooldb'])
+    proxypool = ProxyPool(proxypooldb=proxypooldb, lifetime=7200, proxyname='jiguang', proxyparam=None)
+    try:
+        return proxypool.getProxy()
+    except Exception as e:
+        return proxy
+
+if __name__ == '__main__':
+    configure = {'taskdb': 'redis+taskdb://:@192.168.133.176:6379/12', 'projectdb': 'mysql+projectdb://gcj_admin:test@192.168.133.176:3306/projectdb', 'processdb': 'sqlalchemy+mysql+mysqlconnector+processdb://gcj_admin:test@192.168.133.176:3306/processdb', 'resultdb': 'sqlalchemy+mysql+mysqlconnector+resultdb://gcj_admin:test@192.168.133.176:3306/caijia_zbxxcl', 'message_queue': 'amqp://zhuyf:123456@127.0.0.1:5672//crawler', 'proxypooldb': 'redis+proxypooldb://:@192.168.133.176:6379/14', 'queue_maxsize': 0, 'phantomjs_proxy': 'phantomjs.gcxx.com:80', 'fetcher_queue_names': ['scheduler2fetcher'], 'webui': {'username': 'admin', 'password': 'admin', 'need_auth': True}, 'scheduler': {'xmlrpc_host': '0.0.0.0', 'delete_time': 3600, 'threads': 1, 'loop_limit': 5000, 'loop_interval': 2}, 'fetcher': {'poolsize': 200, 'lifetime': 7200, 'proxyname': 'jiguang'}, 'phantomjs': {'auto_restart': False}, 'all': {'fetcher_num': 100, 'processor_num': 10, 'result_worker_num': 10}}
+    print(get_proxy(configure))
+    print(md5string('http://td.ebuy.csemc.com/exp/querybusiness/common/xjggInfo.do?fphm=XJ019071100318'))
