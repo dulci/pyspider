@@ -6,7 +6,7 @@ logger = logging.getLogger('proxypool')
 
 class ProxyPool(object):
     max_pool_size = 4
-    fire_num = 100
+    fire_num = 2000
     def __init__(self, proxypooldb, lifetime, proxyname, proxyparam=None):
         self.proxypooldb = proxypooldb
         self.lifetime = lifetime
