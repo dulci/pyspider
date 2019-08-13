@@ -2,10 +2,12 @@ import time,hashlib
 import logging
 import urllib3
 import re
+import random
+import time
 logger = logging.getLogger('proxypool')
 
 class ProxyPool(object):
-    max_pool_size = 4
+    max_pool_size = 10
     fire_num = 2000
     def __init__(self, proxypooldb, lifetime, proxyname, proxyparam=None):
         self.proxypooldb = proxypooldb
@@ -16,8 +18,11 @@ class ProxyPool(object):
     def getProxy(self, pos=None, protocol='http'):
         poolsize = self.proxypooldb.getPoolSize(protocol)
         nextPos = None
-        if poolsize == 0:
-            nextPos = self.addProxy(protocol)
+        if poolsize < self.max_pool_size:
+            while poolsize < self.max_pool_size:
+                nextPos = self.addProxy(protocol)
+                time.sleep(0.2)
+                poolsize+=1
         indexes = self.proxypooldb.getIndexes(protocol)
         if pos is not None:
             for key in indexes:
@@ -34,30 +39,30 @@ class ProxyPool(object):
                         nextPos = maxReputationPos
                     else:
                         nextPos = self.proxypooldb.getIndex(indexes[0])
+            if nextPos is not None:
+                return self.proxypooldb.getProxy(nextPos, protocol)
         else:
-            maxReputationPos = self.getMaxReputationPos(protocol)
-            if maxReputationPos:
-                nextPos = maxReputationPos
-            else:
-                nextPos = self.proxypooldb.getIndex(indexes[0])
-
-        if nextPos is not None:
-            return self.proxypooldb.getProxy(nextPos, protocol)
-        else:
-            return None
+            return self.getRandomProxy(protocol)
+        return None
 
     def getMaxReputationPos(self, protocol='http'):
         maxReputation = self.proxypooldb.getMaxReputation(protocol)
         if maxReputation:
             return maxReputation.decode('utf-8').split('.')[-1]
 
-
+    def getRandomProxy(self, protocol='http'):
+        proxies = self.proxypooldb.getProxies(protocol)
+        if proxies:
+            index = random.randint(0,len(proxies)-1)
+            return proxies[index]
+        else:
+            return None
     def getNewProxy(self, protocol='http'):
         if self.proxyname == 'jiguang':
             if 'http' == protocol:
-                url = 'http://d.jghttp.golangapi.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=3&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
+                url = 'http://d.jghttp.golangapi.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
             elif 'https' == protocol:
-                url = 'http://d.jghttp.golangapi.com/getip?num=1&type=1&pro=&city=0&yys=0&port=11&time=3&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
+                url = 'http://d.jghttp.golangapi.com/getip?num=1&type=1&pro=&city=0&yys=0&port=11&time=1&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
             r = urllib3.PoolManager().request('GET', url)
             if r.status == 200 and re.search('^[0-9\.:]+$', str(r.data.decode()).replace('\r\n', '')):
                 return str(r.data.decode()).replace('\r\n', '')

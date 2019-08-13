@@ -508,7 +508,7 @@ def get_host_ip():
 def get_proxy(response):
     proxy = None
     proxypooldb = get_db(response.config['proxypooldb'])
-    proxypool = ProxyPool(proxypooldb=proxypooldb, lifetime=7200, proxyname='jiguang', proxyparam=None)
+    proxypool = ProxyPool(proxypooldb=proxypooldb, lifetime=240, proxyname='jiguang', proxyparam=None)
     try:
         return proxypool.getProxy()
     except Exception as e:

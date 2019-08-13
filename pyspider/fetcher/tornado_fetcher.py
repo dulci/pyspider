@@ -294,7 +294,7 @@ class Fetcher(object):
 
     def pack_proxy_parameters(self, pos, protocol='http'):
         fetch = dict()
-        proxy_string = self.proxypool.getProxy(pos, protocol)
+        proxy_string = self.proxypool.getProxy(None, protocol)
         if proxy_string:
             if '://' not in proxy_string:
                 proxy_string = '%s://%s'%(protocol, proxy_string)
