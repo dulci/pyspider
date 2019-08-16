@@ -95,7 +95,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
                 pass
             self.url.database = database
         self.engine = create_engine(url, convert_unicode=True,
-                                    pool_recycle=3600)
+                                    pool_recycle=3600, pool_size=20)
 
         self._list_project()
 
@@ -139,11 +139,11 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         }
         # if self.get(project, taskid, ('taskid', )):
         #     del obj['taskid']
-        #     db_result = self.engine.execute(self.table.update()
+        #     db_result = self.engine.connect().execute(self.table.update()
         #                                .where(self.table.c.taskid == taskid)
         #                                .values(**self._stringify(obj)))
         # else:
-        #     db_result = self.engine.execute(self.table.insert()
+        #     db_result = self.engine.connect().execute(self.table.insert()
         #                                .values(**self._stringify(obj)))
         db_result = self._save(project, taskid, obj, tablename)
         if group == 'self_crawler' or group == 'temp_crawler':
@@ -157,7 +157,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
                 # Session = sessionmaker(bind=self.engine)
                 # session = Session()
                 try:
-                    for one in self.engine.execute("select crawler_team_id, website_type from bid_website where code='%s'"%(project)):
+                    for one in self.engine.connect().execute("select crawler_team_id, website_type from bid_website where code='%s'"%(project)):
                         crawler_team_id = one['crawler_team_id']
                         website_type = one['website_type']
                     obj = {
@@ -203,17 +203,17 @@ class ResultDB(SplitTableMixin, BaseResultDB):
     def _save(self, project, taskid, fields, table_name='crawler_result_record'):
         if self.get(project, taskid, ('taskid', ), table_name):
             del fields['taskid']
-            db_result = self.engine.execute(self.table.update()
+            db_result = self.engine.connect().execute(self.table.update()
                                        .where(self.table.c.taskid == taskid)
                                        .values(**self._stringify(fields)))
         else:
-            db_result = self.engine.execute(self.table.insert()
+            db_result = self.engine.connect().execute(self.table.insert()
                                        .values(**self._stringify(fields)))
         return db_result
 
     def _get(self, table, column, column_value, fields=None):
         columns = [getattr(table.c, f, f) for f in fields] if fields else table.c
-        for db_result in self.engine.execute(table.select()
+        for db_result in self.engine.connect().execute(table.select()
                                         .with_only_columns(columns=columns)
                                         .where(getattr(table.c, column) == column_value)
                                         .limit(1)):
@@ -222,11 +222,11 @@ class ResultDB(SplitTableMixin, BaseResultDB):
     def other_table_save(self, table, column, column_value, fields):
         if self._get(table, column, column_value, (column, )):
             del fields['column']
-            db_result = self.engine.execute(table.update()
+            db_result = self.engine.connect().execute(table.update()
                                        .where(getattr(table.c, column) == column_value)
                                        .values(**self._stringify(fields)))
         else:
-            db_result = self.engine.execute(table.insert()
+            db_result = self.engine.connect().execute(table.insert()
                                        .values(**self._stringify(fields)))
         return db_result
 
@@ -238,7 +238,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         self.table.name = self._tablename(project)
 
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
-        for task in self.engine.execute(self.table.select()
+        for task in self.engine.connect().execute(self.table.select()
                                         .with_only_columns(columns=columns)
                                         .order_by(self.table.c.updatetime.desc())
                                         .offset(offset).limit(limit)
@@ -262,7 +262,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
                 status_con = or_(status_con, self.table.c.upload_status == i) if status_con else or_(self.table.c.upload_status == i)
             whl_con = and_(whl_con, status_con)
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
-        for task in self.engine.execute(self.table.select()
+        for task in self.engine.connect().execute(self.table.select()
                                                 .with_only_columns(columns=columns)
                                                 .where(whl_con)
                                                 .order_by(self.table.c.updatetime.desc())
@@ -277,7 +277,7 @@ class ResultDB(SplitTableMixin, BaseResultDB):
             return 0
         self.table.name = self._tablename(project)
 
-        for count, in self.engine.execute(self.table.count()):
+        for count, in self.engine.connect().execute(self.table.count()):
             return count
 
     def count(self, project, group, taskid=None, url=None, upload_status=None):
@@ -297,10 +297,10 @@ class ResultDB(SplitTableMixin, BaseResultDB):
                 status_con = or_(status_con, self.table.c.upload_status == i) if status_con else or_(
                     self.table.c.upload_status == i)
             whl_con = and_(whl_con, status_con)
-        for count, in self.engine.execute(self.table.count().where(whl_con)):
+        for count, in self.engine.connect().execute(self.table.count().where(whl_con)):
             return count
 
-    def get(self, project, taskid, fields=None, table_name='crawler_result_record'):
+    def get(self, project, taskid, fields=None, table_name='crawler_result_record',try_num=None):
         # if project not in self.projects:
         #     self._list_project()
         # if project not in self.projects:
@@ -309,17 +309,23 @@ class ResultDB(SplitTableMixin, BaseResultDB):
         self.table.name = self._tablename(table_name)
 
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
-        for task in self.engine.execute(self.table.select()
-                                        .with_only_columns(columns=columns)
-                                        .where(and_(self.table.c.taskid == taskid, self.table.c.project == project))
-                                        .limit(1)):
-            return self._parse(result2dict(columns, task))
+        result = list()
+        try:
+            for task in self.engine.connect().execute(self.table.select().with_only_columns(columns=columns).where(and_(self.table.c.taskid == taskid, self.table.c.project == project)).limit(1)):
+                result.append(self._parse(result2dict(columns, task)))
+            if result:
+                return result[0]
+        except Exception as e:
+            if try_num is None:
+                self.get(project, taskid, fields, table_name, 1)
+            else:
+                raise e
 
     def get_content(self, project, taskid, fields={'taskid', 'project', 'url'}, table_name='crawler_content_result_record'):
         self.table.name = self._tablename(table_name)
         columns = [getattr(self.table.c, f, f) for f in fields] if fields else self.table.c
         try:
-            for task in self.engine.execute(self.table.select()
+            for task in self.engine.connect().execute(self.table.select()
                                                 .with_only_columns(columns=columns)
                                                 .where(
                                                 and_(self.table.c.taskid == taskid,
@@ -331,11 +337,11 @@ class ResultDB(SplitTableMixin, BaseResultDB):
     def clean(self, project, group):
         if group == 'self_crawler' or group == 'temp_crawler':
             self.table.name = "crawler_content_result_record"
-            return self.engine.execute(self.table.delete()
+            return self.engine.connect().execute(self.table.delete()
                                        .where(self.table.c.project == project))
         elif group == 'completion_delay_monitoring':
             self.table.name = "crawler_result_record"
-            return self.engine.execute(self.table.delete()
+            return self.engine.connect().execute(self.table.delete()
                                        .where(self.table.c.project == project))
-            return self.engine.execute(completion_delay_monitoring_record.delete()
+            return self.engine.connect().execute(completion_delay_monitoring_record.delete()
                                        .where(self.table.c.project == project))

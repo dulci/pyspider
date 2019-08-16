@@ -1,4 +1,7 @@
+import os, sys
+sys.path.append( os.path.join( os.path.abspath(os.path.dirname(__file__)) , '../'))
 from pyspider.database.sqlalchemy.resultdb import ResultDB
+from pyspider.database.redis.proxypooldb import Proxypooldb
 from pyspider.fetcher.proxy_pool import ProxyPool
 import time
 import requests
@@ -9,8 +12,12 @@ from pyspider.libs.utils import *
 def sleep(**dkargs):
     def wrapper(func):
         def __wrapper(*args, **kwargs):
-            time.sleep(dkargs.get('time', 0.5))
-            return func(*args, **kwargs)
+            # start = time.time()
+            time.sleep(dkargs.get('time', 0))
+            res = func(*args, **kwargs)
+            # end = time.time()
+            # print('consume time is %s'%(end-start))
+            return res
         return __wrapper
     return wrapper
 
@@ -19,35 +26,43 @@ class CountryCrawler(object):
                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:65.0) Gecko/20100101 Firefox/65.0'}
     def __init__(self):
         self.resultdb = ResultDB('mysql+mysqlconnector://gcj_admin:test@192.168.133.176:3306/caijia_zbxxcl')
+        self.proxypooldb = Proxypooldb('192.168.133.176',6379,None,14)
+        self.proxypool = ProxyPool(proxypooldb=self.proxypooldb, lifetime=240, proxyname='jiguang', proxyparam=None)
 
-    @sleep(time=1)
+    @sleep(time=0)
     def get(self, url,method=None,data=None,cookies=None,timeout=60):
         try:
             if method and method.lower() == 'post':
-                response = requests.post(url,data=data,cookies=cookies,headers=self.headers,timeout=timeout)
+                response = requests.post(url,data=data,cookies=cookies,headers=self.headers,timeout=timeout,proxies={'http': self.proxypool.getProxy()}, verify=False)
             else:
-                response = requests.get(url,params=data,cookies=cookies,headers=self.headers,timeout=timeout)
-            html = response.content
-            cookies = requests.utils.dict_from_cookiejar(response.cookies)
-            return PyQuery(html.decode('utf-8')), cookies
+                response = requests.get(url,params=data,cookies=cookies,headers=self.headers,timeout=timeout,proxies={'http': self.proxypool.getProxy()}, verify=False)
+            if response.status_code == 200:
+                html = response.content
+                cookies = requests.utils.dict_from_cookiejar(response.cookies)
+                return PyQuery(html.decode('utf-8')), cookies
+            else:
+                return None, None
         except Exception as e:
             return None, None
 
-    def on_start(self, url, method=None, data=None, cookies=None):
+    def on_start(self, url, method=None, data=None, cookies=None, max_page=None):
         company_list_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list', method=method, data=data, cookies=cookies)
         print('company list page params is %s'%(data))
         if company_list_pyquery is None:
             print('company list page can not visit')
             return
         for each in company_list_pyquery('.cursorDefault tr').items():
+            # start = time.time()
             self.company_page('http://jzsc.mohurd.gov.cn%s'%(each.find('a').attr.href),{'company_code': each.find('td:nth-child(2)').text(), 'company_name': each.find('td:nth-child(3)').text(), 'company_id':md5string(each.find('td:nth-child(3)').text()), 'org_leader':each.find('td:nth-child(4)').text(), 'region':each.find('td:nth-child(5)').text()})
+            # end = time.time()
+            # print('one company get is time %s'%(end-start))
         total = re.search('tt:(\d+)', str(company_list_pyquery)).group(1)
         reload = re.search('\"\$reload\":(\d+)', str(company_list_pyquery)).group(1)
         page = re.search('pg:(\d+)', str(company_list_pyquery)).group(1)
         page_size = re.search('ps:(\d+)', str(company_list_pyquery)).group(1)
-        page_count = re.search('pc:(\d+)', str(company_list_pyquery)).group(1)
+        page_count = re.search('pc:(\d+)', str(company_list_pyquery)).group(1) if max_page is None else max_page
         if int(page_count) > int(page):
-            self.on_start('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list',method='post',data={'$total':total,'$reload':reload,'$pg':int(page)+1,'$pgsz':page_size},cookies=cookies)
+            self.on_start('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list',method='post',data={'$total':total,'$reload':reload,'$pg':int(page)+1,'$pgsz':page_size},cookies=cookies,max_page=max_page)
 
     def company_page(self, url, save={}):
         company_pyquery, cookies = self.get(url)
@@ -138,231 +153,269 @@ class CountryCrawler(object):
         bids = list()
         for one in project_pyquery('#tab_ztb tr').items():
             if one.find('td:nth-last-child(1)').find('a'):
-                bid_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
-                if bid_pyquery is None:
-                    continue
-                bids.append({'project_name': bid_pyquery('td[data-header=项目名称]').text(),
-                             'project_code': bid_pyquery('td[data-header=项目编号]').text(),
-                             'province_project_code': bid_pyquery('td[data-header=省级项目编号]').text(),
-                             'build_company': bid_pyquery('td[data-header=建设单位]').text(),
-                             'build_company_code': bid_pyquery('td[data-header=建设单位]').next().next().text(),
-                             'build_company_id': md5string(bid_pyquery('td[data-header=建设单位]').text()),
-                             'type': bid_pyquery('td[data-header=项目分类]').text(),
-                             'region': bid_pyquery('td[data-header=项目属地]').text(),
-                             'permission': bid_pyquery('td[data-header=立项文号]').text(),
-                             'level': bid_pyquery('td[data-header=立项级别]').text(),
-                             'investment': bid_pyquery('td[data-header=总投资（万元）]').text(),
-                             'all_area': bid_pyquery('td[data-header=总面积（平方米）]').text(),
-                             'nature': bid_pyquery('td[data-header=建设性质]').text(),
-                             'purpose': bid_pyquery('td[data-header=工程用途]').text(),
-                             'bid_code': bid_pyquery('td[data-header=中标通知书编号]').text(),
-                             'province_bid_code': bid_pyquery('td[data-header=省级中标通知书编号]').text(),
-                             'bid_type': bid_pyquery('td[data-header=招标类型]').text(),
-                             'bid_mode': bid_pyquery('td[data-header=招标方式]').text(),
-                             'winning_date': bid_pyquery('td[data-header=中标日期]').text(),
-                             'winning_price': bid_pyquery('td[data-header=中标金额（万元）]').text(),
-                             'scale': bid_pyquery('td[data-header=建设规模]').text(),
-                             'build_area': bid_pyquery('td[data-header=面积（平方米）]').text(),
-                             'agency_company': bid_pyquery('td[data-header=招标代理单位名称]').text(),
-                             'agency_company_id': md5string(bid_pyquery('td[data-header=招标代理单位名称]').text()),
-                             'agency_company_code': bid_pyquery('td[data-header=招标代理单位组织机构代码]').text(),
-                             'winning_company': bid_pyquery('td[data-header=中标单位名称]').text(),
-                             'winning_company_id': md5string(bid_pyquery('td[data-header=中标单位名称]').text()),
-                             'winning_company_code': bid_pyquery('td[data-header=中标单位组织机构代码]').text(),
-                             'project_manager': bid_pyquery('td[data-header=项目经理\/总监理工程师姓名]').text(),
-                             'project_manager_code': bid_pyquery('td[data-header=项目经理\/总监理工程师身份证号码]').text(),
-                             'register_date': bid_pyquery('td[data-header=记录登记时间]').text()})
+                bid = {'bid_type': one.find('td[data-header=招标类型]').text(),
+                             'bid_mode': one.find('td[data-header=招标方式]').text(),
+                             'winning_company': one.find('td[data-header=中标单位名称]').text(),
+                             'winning_company_id': md5string(one.find('td[data-header=中标单位名称]').text()),
+                             'winning_date': one.find('td[data-header=中标日期]').text(),
+                             'winning_price': one.find('td[data-header=中标金额（万元）]').text(),
+                             'bid_code': one.find('td[data-header=中标通知书编号]').text(),
+                             'province_bid_code': one.find('td[data-header=省级中标通知书编号]').text(),
+                             'detail_url': 'http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url'))}
+                bids.append(bid)
+                # bid_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
+                # if bid_pyquery is None:
+                #     continue
+                # bids.append({'project_name': bid_pyquery('td[data-header=项目名称]').text(),
+                #              'project_code': bid_pyquery('td[data-header=项目编号]').text(),
+                #              'province_project_code': bid_pyquery('td[data-header=省级项目编号]').text(),
+                #              'build_company': bid_pyquery('td[data-header=建设单位]').text(),
+                #              'build_company_code': bid_pyquery('td[data-header=建设单位]').next().next().text(),
+                #              'build_company_id': md5string(bid_pyquery('td[data-header=建设单位]').text()),
+                #              'type': bid_pyquery('td[data-header=项目分类]').text(),
+                #              'region': bid_pyquery('td[data-header=项目属地]').text(),
+                #              'permission': bid_pyquery('td[data-header=立项文号]').text(),
+                #              'level': bid_pyquery('td[data-header=立项级别]').text(),
+                #              'investment': bid_pyquery('td[data-header=总投资（万元）]').text(),
+                #              'all_area': bid_pyquery('td[data-header=总面积（平方米）]').text(),
+                #              'nature': bid_pyquery('td[data-header=建设性质]').text(),
+                #              'purpose': bid_pyquery('td[data-header=工程用途]').text(),
+                #              'bid_code': bid_pyquery('td[data-header=中标通知书编号]').text(),
+                #              'province_bid_code': bid_pyquery('td[data-header=省级中标通知书编号]').text(),
+                #              'bid_type': bid_pyquery('td[data-header=招标类型]').text(),
+                #              'bid_mode': bid_pyquery('td[data-header=招标方式]').text(),
+                #              'winning_date': bid_pyquery('td[data-header=中标日期]').text(),
+                #              'winning_price': bid_pyquery('td[data-header=中标金额（万元）]').text(),
+                #              'scale': bid_pyquery('td[data-header=建设规模]').text(),
+                #              'build_area': bid_pyquery('td[data-header=面积（平方米）]').text(),
+                #              'agency_company': bid_pyquery('td[data-header=招标代理单位名称]').text(),
+                #              'agency_company_id': md5string(bid_pyquery('td[data-header=招标代理单位名称]').text()),
+                #              'agency_company_code': bid_pyquery('td[data-header=招标代理单位组织机构代码]').text(),
+                #              'winning_company': bid_pyquery('td[data-header=中标单位名称]').text(),
+                #              'winning_company_id': md5string(bid_pyquery('td[data-header=中标单位名称]').text()),
+                #              'winning_company_code': bid_pyquery('td[data-header=中标单位组织机构代码]').text(),
+                #              'project_manager': bid_pyquery('td[data-header=项目经理\/总监理工程师姓名]').text(),
+                #              'project_manager_code': bid_pyquery('td[data-header=项目经理\/总监理工程师身份证号码]').text(),
+                #              'register_date': bid_pyquery('td[data-header=记录登记时间]').text()})
         project_info['bids'] = bids
         # 施工图审查
         drawing_reviews = list()
         for one in project_pyquery('#tab_sgtsc tr').items():
             if one.find('td:nth-last-child(1)').find('a'):
-                drawing_review_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
-                if drawing_review_pyquery is None:
-                    continue
-                drawing_review = {'project_name': drawing_review_pyquery('td[data-header=项目名称]').text(),
-                                  'project_code': drawing_review_pyquery('td[data-header=项目编号]').text(),
-                                  'province_project_code': drawing_review_pyquery('td[data-header=省级项目编号]').text(),
-                                  'build_company': drawing_review_pyquery('td[data-header=建设单位]').text(),
-                                  'build_company_code': drawing_review_pyquery(
-                                      'td[data-header=建设单位]').next().next().text(),
-                                  'build_company_id': md5string(drawing_review_pyquery('td[data-header=建设单位]').text()),
-                                  'type': drawing_review_pyquery('td[data-header=项目分类]').text(),
-                                  'region': drawing_review_pyquery('td[data-header=项目属地]').text(),
-                                  'permission': drawing_review_pyquery('td[data-header=立项文号]').text(),
-                                  'level': drawing_review_pyquery('td[data-header=立项级别]').text(),
-                                  'investment': drawing_review_pyquery('td[data-header=总投资（万元）]').text(),
-                                  'all_area': drawing_review_pyquery('td[data-header=总面积（平方米）]').text(),
-                                  'nature': drawing_review_pyquery('td[data-header=建设性质]').text(),
-                                  'purpose': drawing_review_pyquery('td[data-header=工程用途]').text(),
-                                  'review_company': drawing_review_pyquery('td[data-header=施工图审查机构名称]').text(),
-                                  'review_company_id': md5string(
-                                      drawing_review_pyquery('td[data-header=施工图审查机构名称]').text()),
-                                  'review_company_code': drawing_review_pyquery('td[data-header=施工图审查机构组织机构代码]').text(),
-                                  'drawing_review_code': drawing_review_pyquery('td[data-header=施工图审查合格书编号]').text(),
-                                  'province_drawing_review_code': drawing_review_pyquery(
-                                      'td[data-header=省级施工图审查合格书编号]').text(),
-                                  'drawing_review_date': drawing_review_pyquery('td[data-header=审查完成日期]').text(),
-                                  'scale': drawing_review_pyquery('td[data-header=建设规模]').text()}
-                # 企业主体和从业人员信息
-                for child in drawing_review_pyquery('.pro_table_borderright').items():
-                    if child.find('thead>tr>th').size() == 4:
-                        drawing_review_companies = list()
-                        for c in child.find('tbody>tr').items():
-                            drawing_review_companies.append({'company_type': c.find('td:nth-child(1)').text(),
-                                                             'company_name': c.find('td:nth-child(2)').text(),
-                                                             'company_id': md5string(c.find('td:nth-child(2)').text()),
-                                                             'company_code': c.find('td:nth-child(3)').text(),
-                                                             'company_region': c.find('td:nth-child(4)').text()})
-                        drawing_review['companies'] = drawing_review_companies
-                    elif child.find('thead>tr>th').size() == 7:
-                        drawing_review_persons = list()
-                        for p in child.find('tbody>tr').items():
-                            drawing_review_persons.append({'company': p.find('td:nth-child(1)').text(),
-                                                           'company_id': md5string(p.find('td:nth-child(1)').text()),
-                                                           'major': p.find('td:nth-child(2)').text(),
-                                                           'role': p.find('td:nth-child(3)').text(),
-                                                           'name': p.find('td:nth-child(4)').text(),
-                                                           'certificate_code': p.find('td:nth-child(5)').text(),
-                                                           'major_type': p.find('td:nth-child(6)').text(),
-                                                           'major_code': p.find('td:nth-child(7)').text()})
-                        drawing_review['persons'] = drawing_review_persons
+                drawing_review = {'drawing_review_code': one.find('td[data-header=施工图审查合格书编号]').text(),
+                                  'province_drawing_review_code': one.find('td[data-header=省级施工图审查合格书编号]').text(),
+                                  'survey_company': one.find('td[data-header=勘察单位名称]').text(),
+                                  'survey_company_id': md5string(one.find('td[data-header=勘察单位名称]').text()),
+                                  'design_company': one.find('td[data-header=设计单位名称]').text(),
+                                  'design_company_id': md5string(one.find('td[data-header=设计单位名称]').text()),
+                                  'review_company': one.find('td[data-header=施工图审查机构名称]').text(),
+                                  'review_company_id': md5string(one.find('td[data-header=施工图审查机构名称]').text()),
+                                  'drawing_review_date': one.find('td[data-header=审查完成日期]').text(),
+                                  'detail_url': 'http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url'))
+                                  }
+                # drawing_review_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
+                # if drawing_review_pyquery is None:
+                #     continue
+                # drawing_review = {'project_name': drawing_review_pyquery('td[data-header=项目名称]').text(),
+                #                   'project_code': drawing_review_pyquery('td[data-header=项目编号]').text(),
+                #                   'province_project_code': drawing_review_pyquery('td[data-header=省级项目编号]').text(),
+                #                   'build_company': drawing_review_pyquery('td[data-header=建设单位]').text(),
+                #                   'build_company_code': drawing_review_pyquery(
+                #                       'td[data-header=建设单位]').next().next().text(),
+                #                   'build_company_id': md5string(drawing_review_pyquery('td[data-header=建设单位]').text()),
+                #                   'type': drawing_review_pyquery('td[data-header=项目分类]').text(),
+                #                   'region': drawing_review_pyquery('td[data-header=项目属地]').text(),
+                #                   'permission': drawing_review_pyquery('td[data-header=立项文号]').text(),
+                #                   'level': drawing_review_pyquery('td[data-header=立项级别]').text(),
+                #                   'investment': drawing_review_pyquery('td[data-header=总投资（万元）]').text(),
+                #                   'all_area': drawing_review_pyquery('td[data-header=总面积（平方米）]').text(),
+                #                   'nature': drawing_review_pyquery('td[data-header=建设性质]').text(),
+                #                   'purpose': drawing_review_pyquery('td[data-header=工程用途]').text(),
+                #                   'review_company': drawing_review_pyquery('td[data-header=施工图审查机构名称]').text(),
+                #                   'review_company_id': md5string(drawing_review_pyquery('td[data-header=施工图审查机构名称]').text()),
+                #                   'review_company_code': drawing_review_pyquery('td[data-header=施工图审查机构组织机构代码]').text(),
+                #                   'drawing_review_code': drawing_review_pyquery('td[data-header=施工图审查合格书编号]').text(),
+                #                   'province_drawing_review_code': drawing_review_pyquery('td[data-header=省级施工图审查合格书编号]').text(),
+                #                   'drawing_review_date': drawing_review_pyquery('td[data-header=审查完成日期]').text(),
+                #                   'scale': drawing_review_pyquery('td[data-header=建设规模]').text()}
+                # # 企业主体和从业人员信息
+                # for child in drawing_review_pyquery('.pro_table_borderright').items():
+                #     if child.find('thead>tr>th').size() == 4:
+                #         drawing_review_companies = list()
+                #         for c in child.find('tbody>tr').items():
+                #             drawing_review_companies.append({'company_type': c.find('td:nth-child(1)').text(),
+                #                                              'company_name': c.find('td:nth-child(2)').text(),
+                #                                              'company_id': md5string(c.find('td:nth-child(2)').text()),
+                #                                              'company_code': c.find('td:nth-child(3)').text(),
+                #                                              'company_region': c.find('td:nth-child(4)').text()})
+                #         drawing_review['companies'] = drawing_review_companies
+                #     elif child.find('thead>tr>th').size() == 7:
+                #         drawing_review_persons = list()
+                #         for p in child.find('tbody>tr').items():
+                #             drawing_review_persons.append({'company': p.find('td:nth-child(1)').text(),
+                #                                            'company_id': md5string(p.find('td:nth-child(1)').text()),
+                #                                            'major': p.find('td:nth-child(2)').text(),
+                #                                            'role': p.find('td:nth-child(3)').text(),
+                #                                            'name': p.find('td:nth-child(4)').text(),
+                #                                            'certificate_code': p.find('td:nth-child(5)').text(),
+                #                                            'major_type': p.find('td:nth-child(6)').text(),
+                #                                            'major_code': p.find('td:nth-child(7)').text()})
+                #         drawing_review['persons'] = drawing_review_persons
                 drawing_reviews.append(drawing_review)
         project_info['drawing_reviews'] = drawing_reviews
         # 合同备案
         contracts = list()
         for one in project_pyquery('#tab_htba tr').items():
             if one.find('td:nth-last-child(1)').find('a'):
-                contract_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
-                if contract_pyquery is None:
-                    continue
-                contract = {'project_name': contract_pyquery('td[data-header=项目名称]').text(),
-                            'project_code': contract_pyquery('td[data-header=项目编号]').text(),
-                            'province_project_code': contract_pyquery('td[data-header=省级项目编号]').text(),
-                            'build_company': contract_pyquery('td[data-header=建设单位]').text(),
-                            'build_company_code': contract_pyquery('td[data-header=建设单位]').next().next().text(),
-                            'build_company_id': md5string(contract_pyquery('td[data-header=建设单位]').text()),
-                            'type': contract_pyquery('td[data-header=项目分类]').text(),
-                            'region': contract_pyquery('td[data-header=项目属地]').text(),
-                            'permission': contract_pyquery('td[data-header=立项文号]').text(),
-                            'level': contract_pyquery('td[data-header=立项级别]').text(),
-                            'investment': contract_pyquery('td[data-header=总投资（万元）]').text(),
-                            'all_area': contract_pyquery('td[data-header=总面积（平方米）]').text(),
-                            'nature': contract_pyquery('td[data-header=建设性质]').text(),
-                            'purpose': contract_pyquery('td[data-header=工程用途]').text(),
-                            'contract_backup_code': contract_pyquery('td[data-header=合同备案编号]').text(),
-                            'province_contract_backup_code': contract_pyquery('td[data-header=省级合同备案编号]').text(),
-                            'contract_code': contract_pyquery('td[data-header=合同编号]').text(),
-                            'contract_classify': contract_pyquery('td[data-header=合同分类]').text(),
-                            'contract_type': contract_pyquery('td[data-header=合同类别]').text(),
-                            'contract_price': contract_pyquery('td[data-header=合同金额（万元）]').text(),
-                            'scale': contract_pyquery('td[data-header=建设规模]').text(),
-                            'contract_date': contract_pyquery('td[data-header=合同签订日期]').text(),
-                            'employer_company': contract_pyquery('td[data-header=发包单位名称]').text(),
-                            'employer_company_id': md5string(contract_pyquery('td[data-header=发包单位名称]').text()),
-                            'employer_company_code': contract_pyquery('td[data-header=发包单位组织机构代码]').text(),
-                            'employee_company': contract_pyquery('td[data-header=承包单位名称]').text(),
-                            'employee_company_id': md5string(contract_pyquery('td[data-header=承包单位名称]').text()),
-                            'employee_company_code': contract_pyquery('td[data-header=承包单位组织机构代码]').text(),
-                            'union_employee_company': contract_pyquery('td[data-header=联合体承包单位名称]').text(),
-                            'union_employee_company_id': md5string(contract_pyquery('td[data-header=联合体承包单位名称]').text()),
-                            'union_employee_company_code': contract_pyquery('td[data-header=联合体承包单位组织机构代码]').text(),
-                            'register_date': contract_pyquery('td[data-header=记录登记时间]').text()}
+                contract = {'contract_type': one.find('td[data-header=合同类别]').text(),
+                            'contract_backup_code': one.find('td[data-header=合同备案编号]').text(),
+                            'province_contract_backup_code': one.find('td[data-header=省级合同备案编号]').text(),
+                            'contract_price': one.find('td[data-header=合同金额（万元）]').text(),
+                            'contract_date': one.find('td[data-header=合同签订日期]').text(),
+                            'detail_url': 'http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url'))}
+                # contract_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
+                # if contract_pyquery is None:
+                #     continue
+                # contract = {'project_name': contract_pyquery('td[data-header=项目名称]').text(),
+                #             'project_code': contract_pyquery('td[data-header=项目编号]').text(),
+                #             'province_project_code': contract_pyquery('td[data-header=省级项目编号]').text(),
+                #             'build_company': contract_pyquery('td[data-header=建设单位]').text(),
+                #             'build_company_code': contract_pyquery('td[data-header=建设单位]').next().next().text(),
+                #             'build_company_id': md5string(contract_pyquery('td[data-header=建设单位]').text()),
+                #             'type': contract_pyquery('td[data-header=项目分类]').text(),
+                #             'region': contract_pyquery('td[data-header=项目属地]').text(),
+                #             'permission': contract_pyquery('td[data-header=立项文号]').text(),
+                #             'level': contract_pyquery('td[data-header=立项级别]').text(),
+                #             'investment': contract_pyquery('td[data-header=总投资（万元）]').text(),
+                #             'all_area': contract_pyquery('td[data-header=总面积（平方米）]').text(),
+                #             'nature': contract_pyquery('td[data-header=建设性质]').text(),
+                #             'purpose': contract_pyquery('td[data-header=工程用途]').text(),
+                #             'contract_backup_code': contract_pyquery('td[data-header=合同备案编号]').text(),
+                #             'province_contract_backup_code': contract_pyquery('td[data-header=省级合同备案编号]').text(),
+                #             'contract_code': contract_pyquery('td[data-header=合同编号]').text(),
+                #             'contract_classify': contract_pyquery('td[data-header=合同分类]').text(),
+                #             'contract_type': contract_pyquery('td[data-header=合同类别]').text(),
+                #             'contract_price': contract_pyquery('td[data-header=合同金额（万元）]').text(),
+                #             'scale': contract_pyquery('td[data-header=建设规模]').text(),
+                #             'contract_date': contract_pyquery('td[data-header=合同签订日期]').text(),
+                #             'employer_company': contract_pyquery('td[data-header=发包单位名称]').text(),
+                #             'employer_company_id': md5string(contract_pyquery('td[data-header=发包单位名称]').text()),
+                #             'employer_company_code': contract_pyquery('td[data-header=发包单位组织机构代码]').text(),
+                #             'employee_company': contract_pyquery('td[data-header=承包单位名称]').text(),
+                #             'employee_company_id': md5string(contract_pyquery('td[data-header=承包单位名称]').text()),
+                #             'employee_company_code': contract_pyquery('td[data-header=承包单位组织机构代码]').text(),
+                #             'union_employee_company': contract_pyquery('td[data-header=联合体承包单位名称]').text(),
+                #             'union_employee_company_id': md5string(contract_pyquery('td[data-header=联合体承包单位名称]').text()),
+                #             'union_employee_company_code': contract_pyquery('td[data-header=联合体承包单位组织机构代码]').text(),
+                #             'register_date': contract_pyquery('td[data-header=记录登记时间]').text()}
                 contracts.append(contract)
         project_info['contracts'] = contracts
         # 施工许可
         construction_permits = list()
         for one in project_pyquery('#tab_sgxk tr').items():
             if one.find('td:nth-last-child(1)').find('a'):
-                construction_permit_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
-                if construction_permit_pyquery is None:
-                    continue
-                construction_permit = {'project_name': construction_permit_pyquery('td[data-header=项目名称]').text(),
-                                       'project_code': construction_permit_pyquery('td[data-header=项目编号]').text(),
-                                       'province_project_code': construction_permit_pyquery('td[data-header=省级项目编号]').text(),
-                                       'build_company': construction_permit_pyquery('td[data-header=建设单位]').text(),
-                                       'build_company_code': construction_permit_pyquery('td[data-header=建设单位]').next().next().text(),
-                                       'build_company_id': md5string(construction_permit_pyquery('td[data-header=建设单位]').text()),
-                                       'type': construction_permit_pyquery('td[data-header=项目分类]').text(),
-                                       'region': construction_permit_pyquery('td[data-header=项目属地]').text(),
-                                       'permission': construction_permit_pyquery('td[data-header=立项文号]').text(),
-                                       'level': construction_permit_pyquery('td[data-header=立项级别]').text(),
-                                       'investment': construction_permit_pyquery('td[data-header=总投资（万元）]').text(),
-                                       'all_area': construction_permit_pyquery('td[data-header=总面积（平方米）]').text(),
-                                       'nature': construction_permit_pyquery('td[data-header=建设性质]').text(),
-                                       'purpose': construction_permit_pyquery('td[data-header=工程用途]').text(),
-                                       'construction_permit_code': construction_permit_pyquery('td[data-header=施工许可证编号]').text(),
-                                       'province_construction_permit_code': construction_permit_pyquery('td[data-header=省级施工许可证编号]').text(),
-                                       'drawing_review_code': construction_permit_pyquery('td[data-header=施工图审查合格书编号]').text(),
-                                       'contract_price': construction_permit_pyquery('td[data-header=合同金额（万元）]').text(),
-                                       'project_manager': construction_permit_pyquery('td[data-header=项目经理]').text(),
-                                       'project_manager_code': construction_permit_pyquery('td[data-header=项目经理身份证号]').text(),
-                                       'project_director': construction_permit_pyquery('td[data-header=项目总监]').text(),
-                                       'project_director_code': construction_permit_pyquery('td[data-header=项目总监身份证号]').text(),
-                                       'area': construction_permit_pyquery('td[data-header=面积（平方米）]').text(),
-                                       'register_date': construction_permit_pyquery('td[data-header=记录登记时间]').text()}
-                construction_permit_companies = list()
-                for c in construction_permit_pyquery('.pro_table_borderright tbody tr').items():
-                    construction_permit_companies.append({'company_type': c.find('td:nth-child(1)').text(),
-                                                          'company_name': c.find('td:nth-child(2)').text(),
-                                                          'company_id': md5string(c.find('td:nth-child(2)').text()),
-                                                          'company_code': c.find('td:nth-child(3)').text(),
-                                                          'company_region': c.find('td:nth-child(4)').text()})
-                construction_permit['companies'] = construction_permit_companies
+                construction_permit = {'construction_permit_code': one.find('td[data-header=施工许可证编号]').text(),
+                                       'province_construction_permit_code': one.find('td[data-header=省级施工许可证编号]').text(),
+                                       'contract_price': one.find('td[data-header=合同金额（万元）]').text(),
+                                       'area': one.find('td[data-header=面积（平方米）]').text(),
+                                       'register_date': one.find('td[data-header=发证日期]').text(),
+                                       'detail_url': 'http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url'))}
+                # construction_permit_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
+                # if construction_permit_pyquery is None:
+                #     continue
+                # construction_permit = {'project_name': construction_permit_pyquery('td[data-header=项目名称]').text(),
+                #                        'project_code': construction_permit_pyquery('td[data-header=项目编号]').text(),
+                #                        'province_project_code': construction_permit_pyquery('td[data-header=省级项目编号]').text(),
+                #                        'build_company': construction_permit_pyquery('td[data-header=建设单位]').text(),
+                #                        'build_company_code': construction_permit_pyquery('td[data-header=建设单位]').next().next().text(),
+                #                        'build_company_id': md5string(construction_permit_pyquery('td[data-header=建设单位]').text()),
+                #                        'type': construction_permit_pyquery('td[data-header=项目分类]').text(),
+                #                        'region': construction_permit_pyquery('td[data-header=项目属地]').text(),
+                #                        'permission': construction_permit_pyquery('td[data-header=立项文号]').text(),
+                #                        'level': construction_permit_pyquery('td[data-header=立项级别]').text(),
+                #                        'investment': construction_permit_pyquery('td[data-header=总投资（万元）]').text(),
+                #                        'all_area': construction_permit_pyquery('td[data-header=总面积（平方米）]').text(),
+                #                        'nature': construction_permit_pyquery('td[data-header=建设性质]').text(),
+                #                        'purpose': construction_permit_pyquery('td[data-header=工程用途]').text(),
+                #                        'construction_permit_code': construction_permit_pyquery('td[data-header=施工许可证编号]').text(),
+                #                        'province_construction_permit_code': construction_permit_pyquery('td[data-header=省级施工许可证编号]').text(),
+                #                        'drawing_review_code': construction_permit_pyquery('td[data-header=施工图审查合格书编号]').text(),
+                #                        'contract_price': construction_permit_pyquery('td[data-header=合同金额（万元）]').text(),
+                #                        'project_manager': construction_permit_pyquery('td[data-header=项目经理]').text(),
+                #                        'project_manager_code': construction_permit_pyquery('td[data-header=项目经理身份证号]').text(),
+                #                        'project_director': construction_permit_pyquery('td[data-header=项目总监]').text(),
+                #                        'project_director_code': construction_permit_pyquery('td[data-header=项目总监身份证号]').text(),
+                #                        'area': construction_permit_pyquery('td[data-header=面积（平方米）]').text(),
+                #                        'register_date': construction_permit_pyquery('td[data-header=记录登记时间]').text()}
+                # construction_permit_companies = list()
+                # for c in construction_permit_pyquery('.pro_table_borderright tbody tr').items():
+                #     construction_permit_companies.append({'company_type': c.find('td:nth-child(1)').text(),
+                #                                           'company_name': c.find('td:nth-child(2)').text(),
+                #                                           'company_id': md5string(c.find('td:nth-child(2)').text()),
+                #                                           'company_code': c.find('td:nth-child(3)').text(),
+                #                                           'company_region': c.find('td:nth-child(4)').text()})
+                # construction_permit['companies'] = construction_permit_companies
                 construction_permits.append(construction_permit)
         project_info['construction_permits'] = construction_permits
         # 竣工验收备案
         completed_reviews = list()
         for one in project_pyquery('#tab_jgysba tr').items():
             if one.find('td:nth-last-child(1)').find('a'):
-                completed_review_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
-                if completed_review_pyquery is None:
-                    continue
-                completed_review = {'project_name': completed_review_pyquery('td[data-header=项目名称]').text(),
-                                    'project_code': completed_review_pyquery('td[data-header=项目编号]').text(),
-                                    'province_project_code': completed_review_pyquery('td[data-header=省级项目编号]').text(),
-                                    'build_company': completed_review_pyquery('td[data-header=建设单位]').text(),
-                                    'build_company_code': completed_review_pyquery('td[data-header=建设单位]').next().next().text(),
-                                    'build_company_id': md5string(completed_review_pyquery('td[data-header=建设单位]').text()),
-                                    'type': completed_review_pyquery('td[data-header=项目分类]').text(),
-                                    'region': completed_review_pyquery('td[data-header=项目属地]').text(),
-                                    'permission': completed_review_pyquery('td[data-header=立项文号]').text(),
-                                    'level': completed_review_pyquery('td[data-header=立项级别]').text(),
-                                    'investment': completed_review_pyquery('td[data-header=总投资（万元）]').text(),
-                                    'all_area': completed_review_pyquery('td[data-header=总面积（平方米）]').text(),
-                                    'nature': completed_review_pyquery('td[data-header=建设性质]').text(),
-                                    'purpose': completed_review_pyquery('td[data-header=工程用途]').text(),
-                                    'completed_review_code': completed_review_pyquery('td[data-header=竣工备案编号]').text(),
-                                    'province_completed_review_code': completed_review_pyquery('td[data-header=省级竣工备案编号]').text(),
-                                    'actual_price': completed_review_pyquery('td[data-header=实际造价（万元）]').text(),
-                                    'actual_area': completed_review_pyquery('td[data-header=实际面积（平方米）]').text(),
-                                    'actual_scale': completed_review_pyquery('td[data-header=实际建设规模]').text(),
-                                    'structure': completed_review_pyquery('td[data-header=结构体系]').text(),
-                                    'actual_start_date': completed_review_pyquery('td[data-header=实际开工日期]').text(),
-                                    'actual_end_date': completed_review_pyquery('td[data-header=实际竣工验收日期]').text(),
-                                    'register_date': completed_review_pyquery('td[data-header=记录登记时间]').text(),
-                                    'remark': completed_review_pyquery('td[data-header=备注]').text()}
-                # 企业主体和从业人员信息
-                for child in completed_review_pyquery('.pro_table_borderright').items():
-                    if child.find('thead>tr>th').size() == 4:
-                        completed_review_companies = list()
-                        for c in child.find('tbody>tr').items():
-                            completed_review_companies.append({'company_type': c.find('td:nth-child(1)').text(),
-                                                               'company_name': c.find('td:nth-child(2)').text(),
-                                                               'company_id': md5string(c.find('td:nth-child(2)').text()),
-                                                               'company_code': c.find('td:nth-child(3)').text(),
-                                                               'company_region': c.find('td:nth-child(4)').text()})
-                        completed_review['companies'] = completed_review_companies
-                    elif child.find('thead>tr>th').size() == 5:
-                        completed_review_persons = list()
-                        for p in child.find('tbody>tr').items():
-                            completed_review_persons.append(
-                                {'role': p.find('td:nth-child(1)').text(),
-                                 'name': p.find('td:nth-child(2)').text(),
-                                 'certificate_code': p.find('td:nth-child(3)').text(),
-                                 'major_type': p.find('td:nth-child(4)').text(),
-                                 'major_code': p.find('td:nth-child(5)').text()})
-                        completed_review['persons'] = completed_review_persons
+                completed_review = {'completed_review_code': one.find('td[data-header=竣工备案编号]').text(),
+                                    'province_completed_review_code': one.find('td[data-header=省级竣工备案编号]').text(),
+                                    'actual_price': one.find('td[data-header=实际造价（万元）]').text(),
+                                    'actual_area': one.find('td[data-header=实际面积（平方米）]').text(),
+                                    'actual_start_date': one.find('td[data-header=实际开工日期]').text(),
+                                    'actual_end_date': one.find('td[data-header=实际竣工验收日期]').text(),
+                                    'detail_url': 'http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url'))}
+                # completed_review_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn%s' % (one.find('td:nth-last-child(1)').find('a').attr('data-url')), cookies=cookies)
+                # if completed_review_pyquery is None:
+                #     continue
+                # completed_review = {'project_name': completed_review_pyquery('td[data-header=项目名称]').text(),
+                #                     'project_code': completed_review_pyquery('td[data-header=项目编号]').text(),
+                #                     'province_project_code': completed_review_pyquery('td[data-header=省级项目编号]').text(),
+                #                     'build_company': completed_review_pyquery('td[data-header=建设单位]').text(),
+                #                     'build_company_code': completed_review_pyquery('td[data-header=建设单位]').next().next().text(),
+                #                     'build_company_id': md5string(completed_review_pyquery('td[data-header=建设单位]').text()),
+                #                     'type': completed_review_pyquery('td[data-header=项目分类]').text(),
+                #                     'region': completed_review_pyquery('td[data-header=项目属地]').text(),
+                #                     'permission': completed_review_pyquery('td[data-header=立项文号]').text(),
+                #                     'level': completed_review_pyquery('td[data-header=立项级别]').text(),
+                #                     'investment': completed_review_pyquery('td[data-header=总投资（万元）]').text(),
+                #                     'all_area': completed_review_pyquery('td[data-header=总面积（平方米）]').text(),
+                #                     'nature': completed_review_pyquery('td[data-header=建设性质]').text(),
+                #                     'purpose': completed_review_pyquery('td[data-header=工程用途]').text(),
+                #                     'completed_review_code': completed_review_pyquery('td[data-header=竣工备案编号]').text(),
+                #                     'province_completed_review_code': completed_review_pyquery('td[data-header=省级竣工备案编号]').text(),
+                #                     'actual_price': completed_review_pyquery('td[data-header=实际造价（万元）]').text(),
+                #                     'actual_area': completed_review_pyquery('td[data-header=实际面积（平方米）]').text(),
+                #                     'actual_scale': completed_review_pyquery('td[data-header=实际建设规模]').text(),
+                #                     'structure': completed_review_pyquery('td[data-header=结构体系]').text(),
+                #                     'actual_start_date': completed_review_pyquery('td[data-header=实际开工日期]').text(),
+                #                     'actual_end_date': completed_review_pyquery('td[data-header=实际竣工验收日期]').text(),
+                #                     'register_date': completed_review_pyquery('td[data-header=记录登记时间]').text(),
+                #                     'remark': completed_review_pyquery('td[data-header=备注]').text()}
+                # # 企业主体和从业人员信息
+                # for child in completed_review_pyquery('.pro_table_borderright').items():
+                #     if child.find('thead>tr>th').size() == 4:
+                #         completed_review_companies = list()
+                #         for c in child.find('tbody>tr').items():
+                #             completed_review_companies.append({'company_type': c.find('td:nth-child(1)').text(),
+                #                                                'company_name': c.find('td:nth-child(2)').text(),
+                #                                                'company_id': md5string(c.find('td:nth-child(2)').text()),
+                #                                                'company_code': c.find('td:nth-child(3)').text(),
+                #                                                'company_region': c.find('td:nth-child(4)').text()})
+                #         completed_review['companies'] = completed_review_companies
+                #     elif child.find('thead>tr>th').size() == 5:
+                #         completed_review_persons = list()
+                #         for p in child.find('tbody>tr').items():
+                #             completed_review_persons.append(
+                #                 {'role': p.find('td:nth-child(1)').text(),
+                #                  'name': p.find('td:nth-child(2)').text(),
+                #                  'certificate_code': p.find('td:nth-child(3)').text(),
+                #                  'major_type': p.find('td:nth-child(4)').text(),
+                #                  'major_code': p.find('td:nth-child(5)').text()})
+                #         completed_review['persons'] = completed_review_persons
                 completed_reviews.append(completed_review)
         project_info['completed_reviews'] = completed_reviews
         return project_info
@@ -379,11 +432,11 @@ class CountryCrawler(object):
             if person_info:
                 persons.append(person_info)
         if person_list_pyquery('.clearfix'):
-            total = re.search('tt:(\d+)', str(project_list_pyquery)).group(1)
-            reload = re.search('\"\$reload\":(\d+)', str(project_list_pyquery)).group(1)
-            page = re.search('pg:(\d+)', str(project_list_pyquery)).group(1)
-            page_size = re.search('ps:(\d+)', str(project_list_pyquery)).group(1)
-            page_count = re.search('pc:(\d+)', str(project_list_pyquery)).group(1)
+            total = re.search('tt:(\d+)', str(person_list_pyquery)).group(1)
+            reload = re.search('\"\$reload\":(\d+)', str(person_list_pyquery)).group(1)
+            page = re.search('pg:(\d+)', str(person_list_pyquery)).group(1)
+            page_size = re.search('ps:(\d+)', str(person_list_pyquery)).group(1)
+            page_count = re.search('pc:(\d+)', str(person_list_pyquery)).group(1)
             if int(page_count) > int(page):
                 self.person_list(url, method='post', data={'$total':total,'$reload':reload,'$pg':int(page)+1,'$pgsz':page_size},cookies=cookies, persons=persons)
 
@@ -393,10 +446,10 @@ class CountryCrawler(object):
             print('person page can not visit url is %s'%(url))
             return
         person_pyquery('.activeTinyTabContent dl').remove('span')
-        person_info = {'name': response.doc('.user_info > b').text(),
-                       'sex': response.doc('.query_info_box .activeTinyTabContent dl dd:nth-child(1)').text(),
-                       'certificate_type': response.doc('.query_info_box .activeTinyTabContent dl dd:nth-child(2)').text(),
-                       'certificate_code': response.doc('.query_info_box .activeTinyTabContent dl dd:nth-child(3)').text()}
+        person_info = {'name': person_pyquery('.user_info > b').text(),
+                       'sex': person_pyquery('.query_info_box .activeTinyTabContent dl dd:nth-child(1)').text(),
+                       'certificate_type': person_pyquery('.query_info_box .activeTinyTabContent dl dd:nth-child(2)').text(),
+                       'certificate_code': person_pyquery('.query_info_box .activeTinyTabContent dl dd:nth-child(3)').text()}
         # 人员资质
         qualifications = list()
         for one in person_pyquery('#regcert_tab > dl').items():
@@ -416,19 +469,20 @@ class CountryCrawler(object):
         person_info['qualifications'] = qualifications
         # 变更记录
         change_infos = list()
-        change_info_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/staff/staffWorkRecordList/%s' % (url.split('/')[-1]), cookies=cookies)
-        if change_info_pyquery and change_info_pyquery('#table tbody tr').eq(0).find('td').size() == 2:
-            for one in change_info_pyquery('#table tbody tr').items():
-                one.find('.curQy').remove('small')
-                changes = list()
-                change_info = {'register_type': one.find('td').eq(0).text(), 'company': one.find('.curQy').text(),'company_id': md5string(one.find('.curQy').text())}
-                for change in one.find('ul li').items():
-                    companies = [x.text() for x in change.find('.cbp_tmlabel span').items()]
-                    changes.append({'change_date': '/'.join(re.findall('\d+', change.find('.cbp_tmtime span').text())),
-                                    'old_company': companies[0], 'old_company_id': md5string(companies[0]),
-                                    'new_company': companies[1], 'new_company_id': md5string(companies[1])})
-                change_info['changes'] = changes
-                change_infos.append(change_info)
+        if person_pyquery('.query_info_tab ul li:nth-last-child(1)').text() != '变更记录':
+            change_info_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/staff/staffWorkRecordList/%s' % (url.split('/')[-1]), cookies=cookies)
+            if change_info_pyquery and change_info_pyquery('#table tbody tr').eq(0).find('td').size() == 2:
+                for one in change_info_pyquery('#table tbody tr').items():
+                    one.find('.curQy').remove('small')
+                    changes = list()
+                    change_info = {'register_type': one.find('td').eq(0).text(), 'company': one.find('.curQy').text(),'company_id': md5string(one.find('.curQy').text())}
+                    for change in one.find('ul li').items():
+                        companies = [x.text() for x in change.find('.cbp_tmlabel span').items()]
+                        changes.append({'change_date': '/'.join(re.findall('\d+', change.find('.cbp_tmtime span').text())),
+                                        'old_company': companies[0], 'old_company_id': md5string(companies[0]),
+                                        'new_company': companies[1], 'new_company_id': md5string(companies[1])})
+                    change_info['changes'] = changes
+                    change_infos.append(change_info)
         person_info['change_infos'] = change_infos
         # 不良行为
         break_promises = list()
