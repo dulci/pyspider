@@ -6,9 +6,11 @@ from pyspider.fetcher.proxy_pool import ProxyPool
 import time
 import requests
 import re
+import logging
 from pyquery import PyQuery
 from pyspider.libs.utils import *
 
+logger = logging.getLogger('countrycrawler')
 def sleep(**dkargs):
     def wrapper(func):
         def __wrapper(*args, **kwargs):
@@ -16,7 +18,7 @@ def sleep(**dkargs):
             time.sleep(dkargs.get('time', 0))
             res = func(*args, **kwargs)
             # end = time.time()
-            # print('consume time is %s'%(end-start))
+            # logger.error('consume time is %s'%(end-start))
             return res
         return __wrapper
     return wrapper
@@ -25,8 +27,8 @@ class CountryCrawler(object):
     headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:65.0) Gecko/20100101 Firefox/65.0'}
     def __init__(self):
-        self.resultdb = ResultDB('mysql+mysqlconnector://gcj_admin:test@192.168.133.176:3306/caijia_zbxxcl')
-        self.proxypooldb = Proxypooldb('192.168.133.176',6379,None,14)
+        self.resultdb = ResultDB('mysql+mysqlconnector://crawlergov:X2xMGSJjLKC490%@10.125.4.148:8635/crawler_gov')
+        self.proxypooldb = Proxypooldb('10.125.4.64',6379,'www.zx.c0m',7)
         self.proxypool = ProxyPool(proxypooldb=self.proxypooldb, lifetime=240, proxyname='jiguang', proxyparam=None)
 
     @sleep(time=0)
@@ -45,30 +47,42 @@ class CountryCrawler(object):
         except Exception as e:
             return None, None
 
-    def on_start(self, url, method=None, data=None, cookies=None, max_page=None):
+    def on_start(self, url, method=None, data=None, cookies=None, max_page=None, retry_num=0):
         company_list_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list', method=method, data=data, cookies=cookies)
-        print('company list page params is %s'%(data))
+        logger.error('company list page params is %s'%(data))
         if company_list_pyquery is None:
-            print('company list page can not visit')
-            return
+            if retry_num < 2:
+                logger.error('company list retry will be after 240seconds')
+                time.sleep(240)
+                self.on_start(url,method,data,cookies,max_page,retry_num+1)
+                return
+            else:
+                logger.error('company list page can not visit')
+                return
         for each in company_list_pyquery('.cursorDefault tr').items():
             # start = time.time()
             self.company_page('http://jzsc.mohurd.gov.cn%s'%(each.find('a').attr.href),{'company_code': each.find('td:nth-child(2)').text(), 'company_name': each.find('td:nth-child(3)').text(), 'company_id':md5string(each.find('td:nth-child(3)').text()), 'org_leader':each.find('td:nth-child(4)').text(), 'region':each.find('td:nth-child(5)').text()})
             # end = time.time()
-            # print('one company get is time %s'%(end-start))
+            # logger.error('one company get is time %s'%(end-start))
         total = re.search('tt:(\d+)', str(company_list_pyquery)).group(1)
         reload = re.search('\"\$reload\":(\d+)', str(company_list_pyquery)).group(1)
         page = re.search('pg:(\d+)', str(company_list_pyquery)).group(1)
         page_size = re.search('ps:(\d+)', str(company_list_pyquery)).group(1)
         page_count = re.search('pc:(\d+)', str(company_list_pyquery)).group(1) if max_page is None else max_page
         if int(page_count) > int(page):
-            self.on_start('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list',method='post',data={'$total':total,'$reload':reload,'$pg':int(page)+1,'$pgsz':page_size},cookies=cookies,max_page=max_page)
+            self.on_start('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list',method='post',data={'$total':total,'$reload':reload,'$pg':int(page)+1,'$pgsz':page_size},cookies=cookies,max_page=max_page,retry_num=0)
 
-    def company_page(self, url, save={}):
+    def company_page(self, url, save={}, retry_num=0):
         company_pyquery, cookies = self.get(url)
         if company_pyquery is None:
-            print('company can not visit url is %s'%(url))
-            return
+            if retry_num < 2:
+                logger.error('company page retry will be after 240seconds')
+                time.sleep(240)
+                self.company_page(url, save, retry_num+1)
+                return
+            else:
+               logger.error('company can not visit url is %s'%(url))
+               return
         company_info = {'company_code': company_pyquery('.datas_table tr:nth-child(1) td').text().replace(chr(0xa0), ' '),
                         'company_name': save['company_name'], 'company_id': save['company_id'],
                         'org_leader': save['org_leader'], 'region': save['region'],
@@ -91,7 +105,7 @@ class CountryCrawler(object):
         qualifications = list()
         qualification_pyquery, cookies = self.get(url)
         if qualification_pyquery is None:
-            print('qualifications can not visit url is %s'%(url))
+            logger.error('qualifications can not visit url is %s'%(url))
             return
         for each in qualification_pyquery('.row').items():
             qualifications.append(
@@ -103,7 +117,7 @@ class CountryCrawler(object):
     def project_list(self, url, method=None, data=None, cookies=None, projects=[]):
         project_list_pyquery, cookies = self.get(url,method=method,data=data,cookies=cookies)
         if project_list_pyquery is None:
-            print('project list can not visit url is %s, data is %s'%(url, data))
+            logger.error('project list can not visit url is %s, data is %s'%(url, data))
             return
         for each in project_list_pyquery('.pro_table_box tbody tr').items():
             if not each.find('td[data-header]'):
@@ -123,7 +137,7 @@ class CountryCrawler(object):
     def project_page(self, url):
         project_pyquery, cookies = self.get(url)
         if project_pyquery is None:
-            print('project page can not visit url is %s'%(url))
+            logger.error('project page can not visit url is %s'%(url))
             return
         project_pyquery('.activeTinyTabContent dl').remove('span')
         investment = project_pyquery('dd:nth-child(9)').text()
@@ -423,7 +437,7 @@ class CountryCrawler(object):
     def person_list(self, url, method=None, data=None, cookies=None, persons=[]):
         person_list_pyquery, cookies = self.get(url,method=method,data=data,cookies=cookies)
         if person_list_pyquery is None:
-            print('person list can not visit url is %s'%(url))
+            logger.error('person list can not visit url is %s'%(url))
             return
         for each in person_list_pyquery('.pro_table_box tbody tr').items():
             if not each.find('td[data-header]'):
@@ -443,7 +457,7 @@ class CountryCrawler(object):
     def person_page(self, url):
         person_pyquery, cookies = self.get(url)
         if person_pyquery is None:
-            print('person page can not visit url is %s'%(url))
+            logger.error('person page can not visit url is %s'%(url))
             return
         person_pyquery('.activeTinyTabContent dl').remove('span')
         person_info = {'name': person_pyquery('.user_info > b').text(),
@@ -559,5 +573,5 @@ class CountryCrawler(object):
 
 if __name__ == '__main__':
     cc = CountryCrawler()
-    print(cc.on_start('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list'))
-    print('finish')
+    logger.error(cc.on_start('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list',data={'$total': '373478', '$reload': '0', '$pg': 31, '$pgsz': '15'},retry_num=0))
+    logger.error('finish')
