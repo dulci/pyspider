@@ -7,7 +7,7 @@ import time
 logger = logging.getLogger('proxypool')
 
 class ProxyPool(object):
-    max_pool_size = 10
+    max_pool_size = 2
     fire_num = 2000
     def __init__(self, proxypooldb, lifetime, proxyname, proxyparam=None):
         self.proxypooldb = proxypooldb
@@ -21,7 +21,6 @@ class ProxyPool(object):
         if poolsize < self.max_pool_size:
             while poolsize < self.max_pool_size:
                 nextPos = self.addProxy(protocol)
-                time.sleep(0.2)
                 poolsize+=1
         indexes = self.proxypooldb.getIndexes(protocol)
         if pos is not None:

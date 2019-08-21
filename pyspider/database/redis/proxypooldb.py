@@ -116,6 +116,14 @@ class Proxypooldb(object):
         self.deleteProxy(pos, protocol)
         self.deleteReputation(pos, protocol)
 
+    def deleteIndexByProxy(self, proxy, protocol):
+        indexes = self.redis.keys(self._prefix(protocol) + self._proxy_key(protocol) + '*')
+        for index in indexes:
+            index_value = self.redis.get(index)
+            if index_value and index_value.decode('utf-8') == proxy:
+                pos = index_value.split('.')
+                self.deleteIndex(pos, protocol)
+
     def getIndexes(self, protocol='http'):
         indexes = self.redis.keys(self._prefix(protocol) + self._index_key(protocol) + "*")
         indexes.sort()
