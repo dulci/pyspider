@@ -40,10 +40,11 @@ class CountryCrawler(object):
     @sleep(time=0)
     def get(self, url,method=None,data=None,cookies=None,timeout=60,retry_num=0):
         try:
+            proxy = self.proxypool.getProxy()
             if method and method.lower() == 'post':
-                response = requests.post(url,data=data,cookies=cookies,headers=self.headers,timeout=timeout,proxies={'http': self.proxypool.getProxy()}, verify=False)
+                response = requests.post(url,data=data,cookies=cookies,headers=self.headers,timeout=timeout,proxies={'http': proxy}, verify=False)
             else:
-                response = requests.get(url,params=data,cookies=cookies,headers=self.headers,timeout=timeout,proxies={'http': self.proxypool.getProxy()}, verify=False)
+                response = requests.get(url,params=data,cookies=cookies,headers=self.headers,timeout=timeout,proxies={'http': proxy}, verify=False)
             if response.status_code == 200:
                 html = response.content
                 cookies = requests.utils.dict_from_cookiejar(response.cookies)
@@ -53,8 +54,8 @@ class CountryCrawler(object):
         except requests.exceptions.ProxyError as proxy_error:
             if retry_num < 3:
                 logger.error('proxy is error will be retry, retry num is %s'%(retry_num+1))
-                proxypooldb.deleteIndexByProxy(proxy, 'http')
-                return get(url, method, data, cookies, timeout, retry_num+1)
+                self.proxypooldb.deleteIndexByProxy(proxy, 'http')
+                return self.get(url, method, data, cookies, timeout, retry_num+1)
             else:
                 return None, None
         except Exception as e:

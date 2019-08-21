@@ -121,7 +121,7 @@ class Proxypooldb(object):
         for index in indexes:
             index_value = self.redis.get(index)
             if index_value and index_value.decode('utf-8') == proxy:
-                pos = index_value.split('.')
+                pos = index_value.decode('utf-8').split('.')
                 self.deleteIndex(pos, protocol)
 
     def getIndexes(self, protocol='http'):
