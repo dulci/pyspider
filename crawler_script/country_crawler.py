@@ -12,6 +12,7 @@ from pyspider.libs.utils import *
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import math
+import json
 
 logger = logging.getLogger('countrycrawler')
 def sleep(**dkargs):
@@ -30,10 +31,12 @@ class CountryCrawler(object):
     headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:65.0) Gecko/20100101 Firefox/65.0'}
     def __init__(self):
-        self.resultdb = ResultDB('mysql+mysqlconnector://crawlergov:X2xMGSJjLKC490%@10.125.4.148:8635/crawler_gov')
-        self.proxypooldb = Proxypooldb('10.125.4.64',6379,'www.zx.c0m',7)
+        # self.resultdb = ResultDB('mysql+mysqlconnector://crawlergov:X2xMGSJjLKC490%@10.125.4.148:8635/crawler_gov')
+        # self.proxypooldb = Proxypooldb('10.125.4.64',6379,'www.zx.c0m',7)
+        self.resultdb = ResultDB('mysql+mysqlconnector://gcj_admin:test@192.168.133.176:3306/caijia_zbxxcl')
+        self.proxypooldb = Proxypooldb('192.168.133.176', 6379, 'www.zx.c0m', 14)
         self.proxypool = ProxyPool(proxypooldb=self.proxypooldb, lifetime=240, proxyname='jiguang', proxyparam=None)
-        engine = create_engine('mysql://%s:%s@%s/%s?charset=utf8' % ("gcj_admin", "test", "192.168.133.176:3306", "caijia_zbxxcl"),pool_recycle=3600, pool_size=15)
+        engine = create_engine('mysql+mysqlconnector://%s:%s@%s/%s?charset=utf8' % ("gcj_admin", "test", "192.168.133.176:3306", "caijia_zbxxcl"),pool_recycle=3600, pool_size=15)
         Session = sessionmaker(engine)
         self.session = Session()
 
@@ -103,6 +106,20 @@ class CountryCrawler(object):
                                            'org_leader': each.find('td:nth-child(4)').text(),
                                            'region': each.find('td:nth-child(5)').text()})
         self.session.close()
+
+    def query_company_by_file(self):
+        with open("D:\company.json", encoding="UTF-8") as f:
+            for line in f.readlines():
+                line_json = json.loads(line)
+                company_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list',method='post', data={'complexname': line_json['企业信息']['企业名称']})
+                for each in company_pyquery('.cursorDefault tr').items():
+                    if each.find('a'):
+                        self.company_page('http://jzsc.mohurd.gov.cn%s' % (each.find('a').attr.href),
+                                          {'company_code': each.find('td:nth-child(2)').text(),
+                                           'company_name': each.find('td:nth-child(3)').text(),
+                                           'company_id': md5string(each.find('td:nth-child(3)').text()),
+                                           'org_leader': each.find('td:nth-child(4)').text(),
+                                           'region': each.find('td:nth-child(5)').text()})
 
     def company_page(self, url, save={}, retry_num=0):
         company_pyquery, cookies = self.get(url)
@@ -606,5 +623,5 @@ class CountryCrawler(object):
 if __name__ == '__main__':
     cc = CountryCrawler()
     #logger.error(cc.on_start('http://jzsc.mohurd.gov.cn/dataservice/query/comp/list',data={'$total': '373478', '$reload': '0', '$pg': 31, '$pgsz': '15'},retry_num=0))
-    cc.query_company()
+    cc.query_company_by_file()
     logger.error('finish')
