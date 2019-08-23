@@ -15,7 +15,7 @@ class ProxyPool(object):
         self.proxyname = proxyname
         self.proxyparam = proxyparam
 
-    def getProxy(self, pos=None, protocol='http'):
+    def getProxy(self, pos=None, protocol='http', proxy=None):
         poolsize = self.proxypooldb.getPoolSize(protocol)
         nextPos = None
         if poolsize < self.max_pool_size:
@@ -41,7 +41,7 @@ class ProxyPool(object):
             if nextPos is not None:
                 return self.proxypooldb.getProxy(nextPos, protocol)
         else:
-            return self.getRandomProxy(protocol)
+            return self.getRandomProxy(protocol, proxy)
         return None
 
     def getMaxReputationPos(self, protocol='http'):
@@ -49,8 +49,10 @@ class ProxyPool(object):
         if maxReputation:
             return maxReputation.decode('utf-8').split('.')[-1]
 
-    def getRandomProxy(self, protocol='http'):
+    def getRandomProxy(self, protocol='http',proxy=None):
         proxies = self.proxypooldb.getProxies(protocol)
+        if proxy and proxy in proxies:
+            proxies.remove(proxy)
         if proxies:
             index = random.randint(0,len(proxies)-1)
             return proxies[index]
