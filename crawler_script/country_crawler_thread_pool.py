@@ -43,9 +43,9 @@ Session = sessionmaker(engine)
 session = Session()
 
 @sleep(time=0)
-def get(url,method=None,data=None,cookies=None,timeout=60,retry_num=0):
+def get(url,method=None,data=None,cookies=None,timeout=60,retry_num=0, proxy=None):
     try:
-        proxy = proxypool.getProxy()
+        proxy = proxypool.getProxy(proxy=proxy)
         if method and method.lower() == 'post':
             response = requests.post(url,data=data,cookies=cookies,headers=headers,timeout=timeout,proxies={'http': proxy}, verify=False)
         else:
@@ -59,9 +59,9 @@ def get(url,method=None,data=None,cookies=None,timeout=60,retry_num=0):
             return None, None
     except requests.exceptions.ProxyError as proxy_error:
         if retry_num < 3:
-            logger.error('proxy is error will be retry, retry num is %s'%(retry_num+1))
+            logger.error('proxy is error will be retry proxy is %s, retry num is %s'%(proxy, retry_num+1))
             #proxypooldb.deleteIndexByProxy(proxy, 'http')
-            return get(url, method, data, cookies, timeout, retry_num+1)
+            return get(url, method, data, cookies, timeout, retry_num+1, proxy)
         else:
             logger.error('retry 3 is still error')
             return None, None
@@ -117,7 +117,12 @@ def query_company_by_file():
     pool = ThreadPoolExecutor(max_workers=4)
     with open("D:\company.json", encoding="UTF-8") as f:
         num = 0
-        for line in f.readlines():
+        #for line in f.readlines():
+        while True:
+            line = f.readline()
+            if not line:
+                logger.error('no company need crawler')
+                break
             line_json = json.loads(line)
             logger.error(line_json['企业信息']['企业名称'])
             num += 1
