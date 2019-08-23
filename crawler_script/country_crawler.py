@@ -31,12 +31,13 @@ class CountryCrawler(object):
     headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:65.0) Gecko/20100101 Firefox/65.0'}
     def __init__(self):
-        self.resultdb = ResultDB('mysql+mysqlconnector://crawlergov:X2xMGSJjLKC490%@10.125.4.148:8635/crawler_gov')
-        self.proxypooldb = Proxypooldb('10.125.4.64',6379,'www.zx.c0m',7)
-        #self.resultdb = ResultDB('mysql+mysqlconnector://gcj_admin:test@192.168.133.176:3306/caijia_zbxxcl')
-        #self.proxypooldb = Proxypooldb('192.168.133.176', 6379, 'www.zx.c0m', 14)
+        #self.resultdb = ResultDB('mysql+mysqlconnector://crawlergov:X2xMGSJjLKC490%@10.125.4.148:8635/crawler_gov')
+        #self.proxypooldb = Proxypooldb('10.125.4.64',6379,'www.zx.c0m',7)
+        self.resultdb = ResultDB('mysql+mysqlconnector://gcj_admin:test@192.168.133.176:3306/caijia_zbxxcl')
+        self.proxypooldb = Proxypooldb('192.168.133.176', 6379, None, 14)
         self.proxypool = ProxyPool(proxypooldb=self.proxypooldb, lifetime=240, proxyname='jiguang', proxyparam=None)
-        engine = create_engine('mysql+mysqlconnector://%s:%s@%s/%s?charset=utf8' % ("db_xs_gldjc", "xs.gldjc.c0m", "10.125.4.73:3308", "db_xs_new"),pool_recycle=3600, pool_size=15)
+        #engine = create_engine('mysql+mysqlconnector://%s:%s@%s/%s?charset=utf8' % ("db_xs_gldjc", "xs.gldjc.c0m", "10.125.4.73:3308", "db_xs_new"),pool_recycle=3600, pool_size=15)
+        engine = create_engine('mysql+mysqlconnector://%s:%s@%s/%s?charset=utf8' % ("gcj_admin", "test", "192.168.133.176:3306", "caijia_zbxxcl"), pool_recycle=3600, pool_size=15)
         Session = sessionmaker(engine)
         self.session = Session()
 
@@ -108,7 +109,8 @@ class CountryCrawler(object):
         self.session.close()
 
     def query_company_by_file(self):
-        with open("/home/paas/company.json", encoding="UTF-8") as f:
+        #with open("/home/paas/company.json", encoding="UTF-8") as f:
+        with open("D:\company.json", encoding="UTF-8") as f:
             num = 0
             for line in f.readlines():
                 line_json = json.loads(line)
@@ -177,7 +179,14 @@ class CountryCrawler(object):
         for each in project_list_pyquery('.pro_table_box tbody tr').items():
             if not each.find('td[data-header]'):
                 continue
-            project_info = self.project_page('http://jzsc.mohurd.gov.cn/dataservice/query/project/projectDetail/%s' % (each.find('td:nth-child(2)').text()))
+            #project_info = self.project_page('http://jzsc.mohurd.gov.cn/dataservice/query/project/projectDetail/%s' % (each.find('td:nth-child(2)').text()))
+            project_info = {'code':each.find('td:nth-child(2)').text(),
+                            'name':each.find('td:nth-child(3)').text(),
+                            'region':each.find('td:nth-child(4)').text(),
+                            'type':each.find('td:nth-child(5)').text(),
+                            'build_compay':each.find('td:nth-child(6)').text(),
+                            'build_company_id':md5string(each.find('td:nth-child(6)').text()),
+                            'url':'http://jzsc.mohurd.gov.cn/dataservice/query/project/projectDetail/%s' % (each.find('td:nth-child(2)').text())}
             if project_info:
                 projects.append(project_info)
         if project_list_pyquery('.clearfix'):
@@ -536,40 +545,40 @@ class CountryCrawler(object):
                      'validate_date': one.find('dd').eq(4).text(), 'register_company': one.find('dt').eq(0).text(),
                      'register_company_id': md5string(one.find('dt').eq(0).text())})
         person_info['qualifications'] = qualifications
-        # 变更记录
-        change_infos = list()
-        if person_pyquery('.query_info_tab ul li:nth-last-child(1)').text() != '变更记录':
-            change_info_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/staff/staffWorkRecordList/%s' % (url.split('/')[-1]), cookies=cookies)
-            if change_info_pyquery and change_info_pyquery('#table tbody tr').eq(0).find('td').size() == 2:
-                for one in change_info_pyquery('#table tbody tr').items():
-                    one.find('.curQy').remove('small')
-                    changes = list()
-                    change_info = {'register_type': one.find('td').eq(0).text(), 'company': one.find('.curQy').text(),'company_id': md5string(one.find('.curQy').text())}
-                    for change in one.find('ul li').items():
-                        companies = [x.text() for x in change.find('.cbp_tmlabel span').items()]
-                        changes.append({'change_date': '/'.join(re.findall('\d+', change.find('.cbp_tmtime span').text())),
-                                        'old_company': companies[0], 'old_company_id': md5string(companies[0]),
-                                        'new_company': companies[1], 'new_company_id': md5string(companies[1])})
-                    change_info['changes'] = changes
-                    change_infos.append(change_info)
-        person_info['change_infos'] = change_infos
-        # 不良行为
-        break_promises = list()
-        break_promise_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/staff/staffCreditRecordList/%s/0' % (url.split('/')[-1]), cookies=cookies)
-        if break_promise_pyquery and break_promise_pyquery('.pro_table_box tbody tr').eq(0).find('td').size() == 5:
-            for one in break_promise_pyquery('.pro_table_box tbody tr').items():
-                break_promise = {'break_promise_code': one.find('td').eq(0).find('span').text(),
-                                 'break_promiser': one.find('td').eq(1).text(),
-                                 'punish_date': re.search('\d{4}-\d{2}-\d{2}',one.find('td').eq(2).find('div').text()).group(),
-                                 'punish_reason': one.find('td').eq(2).find('a').attr('data-text'),
-                                 'punish_gov_code': one.find('td').eq(3).find('div').text(),
-                                 'validate_date': one.find('td').eq(4).text()}
-                one.find('td').eq(2).remove('div')
-                one.find('td').eq(3).remove('div')
-                break_promise['punish_content'] = one.find('td').eq(2).text()
-                break_promise['punish_gov'] = one.find('td').eq(3).text()
-                break_promises.append(break_promise)
-        person_info['break_promises'] = break_promises
+        # # 变更记录
+        # change_infos = list()
+        # if person_pyquery('.query_info_tab ul li:nth-last-child(1)').text() != '变更记录':
+        #     change_info_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/staff/staffWorkRecordList/%s' % (url.split('/')[-1]), cookies=cookies)
+        #     if change_info_pyquery and change_info_pyquery('#table tbody tr').eq(0).find('td').size() == 2:
+        #         for one in change_info_pyquery('#table tbody tr').items():
+        #             one.find('.curQy').remove('small')
+        #             changes = list()
+        #             change_info = {'register_type': one.find('td').eq(0).text(), 'company': one.find('.curQy').text(),'company_id': md5string(one.find('.curQy').text())}
+        #             for change in one.find('ul li').items():
+        #                 companies = [x.text() for x in change.find('.cbp_tmlabel span').items()]
+        #                 changes.append({'change_date': '/'.join(re.findall('\d+', change.find('.cbp_tmtime span').text())),
+        #                                 'old_company': companies[0], 'old_company_id': md5string(companies[0]),
+        #                                 'new_company': companies[1], 'new_company_id': md5string(companies[1])})
+        #             change_info['changes'] = changes
+        #             change_infos.append(change_info)
+        # person_info['change_infos'] = change_infos
+        # # 不良行为
+        # break_promises = list()
+        # break_promise_pyquery, cookies = self.get('http://jzsc.mohurd.gov.cn/dataservice/query/staff/staffCreditRecordList/%s/0' % (url.split('/')[-1]), cookies=cookies)
+        # if break_promise_pyquery and break_promise_pyquery('.pro_table_box tbody tr').eq(0).find('td').size() == 5:
+        #     for one in break_promise_pyquery('.pro_table_box tbody tr').items():
+        #         break_promise = {'break_promise_code': one.find('td').eq(0).find('span').text(),
+        #                          'break_promiser': one.find('td').eq(1).text(),
+        #                          'punish_date': re.search('\d{4}-\d{2}-\d{2}',one.find('td').eq(2).find('div').text()).group(),
+        #                          'punish_reason': one.find('td').eq(2).find('a').attr('data-text'),
+        #                          'punish_gov_code': one.find('td').eq(3).find('div').text(),
+        #                          'validate_date': one.find('td').eq(4).text()}
+        #         one.find('td').eq(2).remove('div')
+        #         one.find('td').eq(3).remove('div')
+        #         break_promise['punish_content'] = one.find('td').eq(2).text()
+        #         break_promise['punish_gov'] = one.find('td').eq(3).text()
+        #         break_promises.append(break_promise)
+        # person_info['break_promises'] = break_promises
         return person_info
 
     def company_break_promises(self, url):
