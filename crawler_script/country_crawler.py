@@ -18,11 +18,11 @@ logger = logging.getLogger('countrycrawler')
 def sleep(**dkargs):
     def wrapper(func):
         def __wrapper(*args, **kwargs):
-            # start = time.time()
+            start = time.time()
             time.sleep(dkargs.get('time', 0))
             res = func(*args, **kwargs)
-            # end = time.time()
-            # logger.error('consume time is %s'%(end-start))
+            end = time.time()
+            logger.error('consume time is %s'%(end-start))
             return res
         return __wrapper
     return wrapper
@@ -58,7 +58,7 @@ class CountryCrawler(object):
         except requests.exceptions.ProxyError as proxy_error:
             if retry_num < 3:
                 logger.error('proxy is error will be retry, retry num is %s'%(retry_num+1))
-                self.proxypooldb.deleteIndexByProxy(proxy, 'http')
+                #self.proxypooldb.deleteIndexByProxy(proxy, 'http')
                 return self.get(url, method, data, cookies, timeout, retry_num+1)
             else:
                 return None, None
@@ -114,6 +114,7 @@ class CountryCrawler(object):
             num = 0
             for line in f.readlines():
                 line_json = json.loads(line)
+                logger.error(line_json['企业信息']['企业名称'])
                 num += 1
                 if num%1000 == 0:
                     logger.error('%s company has query'%(num))
@@ -506,7 +507,13 @@ class CountryCrawler(object):
         for each in person_list_pyquery('.pro_table_box tbody tr').items():
             if not each.find('td[data-header]'):
                 continue
-            person_info = self.person_page('http://jzsc.mohurd.gov.cn%s' % (re.search('href=\'([\s\S]+?)\'', each.find('td:nth-child(2) a').attr.onclick).group(1)))
+            #person_info = self.person_page('http://jzsc.mohurd.gov.cn%s' % (re.search('href=\'([\s\S]+?)\'', each.find('td:nth-child(2) a').attr.onclick).group(1)))
+            person_info = {'name':each.find('td:nth-child(2)').text(),
+                           'certificate_code':each.find('td:nth-child(3)').text(),
+                           'register_type':each.find('td:nth-child(4)').text(),
+                           'register_code':each.find('td:nth-child(5)').text(),
+                           'register_major':each.find('td:nth-child(6)').text(),
+                           'url':'http://jzsc.mohurd.gov.cn%s' % (re.search('href=\'([\s\S]+?)\'', each.find('td:nth-child(2) a').attr.onclick).group(1))}
             if person_info:
                 persons.append(person_info)
         if person_list_pyquery('.clearfix'):
