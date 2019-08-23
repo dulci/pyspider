@@ -54,6 +54,7 @@ class CountryCrawler(object):
                 cookies = requests.utils.dict_from_cookiejar(response.cookies)
                 return PyQuery(html.decode('utf-8')), cookies
             else:
+                logger.error('response code is not 200 is %s'%(response.status_code))
                 return None, None
         except requests.exceptions.ProxyError as proxy_error:
             if retry_num < 3:
@@ -61,8 +62,10 @@ class CountryCrawler(object):
                 #self.proxypooldb.deleteIndexByProxy(proxy, 'http')
                 return self.get(url, method, data, cookies, timeout, retry_num+1)
             else:
+                logger.error('retry 3 is still error')
                 return None, None
         except Exception as e:
+            logger.error('request is error %s'%(e))
             return None, None
 
     def on_start(self, url, method=None, data=None, cookies=None, max_page=None, retry_num=0):
@@ -146,7 +149,9 @@ class CountryCrawler(object):
                         'org_leader': save['org_leader'], 'region': save['region'],
                         'register_type': company_pyquery('td[data-header=企业登记注册类型]').text(),
                         'company_address': company_pyquery('td[data-header=企业经营地址]').text()}
-        company_info['qualifications'] = self.qualification_page('http://jzsc.mohurd.gov.cn/dataservice/query/comp/caDetailList/%s'%(url.split('/')[-1]))
+        qualifications = list()
+        self.qualification_page('http://jzsc.mohurd.gov.cn/dataservice/query/comp/caDetailList/%s' % (url.split('/')[-1]), qualifications=qualifications)
+        company_info['qualifications'] = qualifications
         projects = list()
         self.project_list('http://jzsc.mohurd.gov.cn/dataservice/query/comp/compPerformanceListSys/%s'%(url.split('/')[-1]), projects=projects)
         company_info['projects'] = projects
@@ -159,9 +164,8 @@ class CountryCrawler(object):
         self.resultdb.save('country',company_info['company_id'],url,company_info,'self_crawler')
         return company_info
 
-    def qualification_page(self, url):
-        qualifications = list()
-        qualification_pyquery, cookies = self.get(url)
+    def qualification_page(self, url, method=None, data=None, cookies=None, qualifications=[]):
+        qualification_pyquery, cookies = self.get(url, method, data, cookies)
         if qualification_pyquery is None:
             logger.error('qualifications can not visit url is %s'%(url))
             return
@@ -170,7 +174,14 @@ class CountryCrawler(object):
                 {'type': each.find('td:nth-child(2)').text(), 'code': each.find('td:nth-child(3)').text(),
                  'name': each.find('td:nth-child(4)').text(), 'start_date': each.find('td:nth-child(5)').text(),
                  'end_date': each.find('td:nth-child(6)').text(), 'gov': each.find('td:nth-child(7)').text()})
-        return qualifications
+        if qualification_pyquery('.clearfix'):
+            total = re.search('tt:(\d+)', str(qualification_pyquery)).group(1)
+            reload = re.search('\"\$reload\":(\d+)', str(qualification_pyquery)).group(1)
+            page = re.search('pg:(\d+)', str(qualification_pyquery)).group(1)
+            page_size = re.search('ps:(\d+)', str(qualification_pyquery)).group(1)
+            page_count = re.search('pc:(\d+)', str(qualification_pyquery)).group(1)
+            if int(page_count) > int(page):
+                self.qualification_page(url, method='post', data={'$total':total,'$reload':reload,'$pg':int(page)+1,'$pgsz':page_size},cookies=cookies, qualifications=qualifications)
 
     def project_list(self, url, method=None, data=None, cookies=None, projects=[]):
         project_list_pyquery, cookies = self.get(url,method=method,data=data,cookies=cookies)
