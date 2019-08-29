@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from country_crawler_thread_pool import *
 import chardet
 logger = logging.getLogger('guangzhou')
+pool = ThreadPoolExecutor(max_workers=4)
 @sleep(time=0)
 def get(url,method=None,data=None,cookies=None,timeout=60,retry_num=0, proxy=None):
     try:
@@ -60,14 +61,14 @@ def company_list(url, method=None, data=None, cookies=None):
     companies_pyquery, cookies = get(url,method,data,cookies)
     for each in companies_pyquery('.wsbs-table tr').items():
         if each.find('td'):
+            logger.error(each.find('a').text())
             company = {'company_code':each.find('a').parent().prev().text(),
                        'company_name': each.find('a').text(),
                        'registration_matters': each.find('a').parent().next().attr.title,
                        'notice_start':each.find('a').parent().next().next().text(),
                        'notice_end': each.find('a').parent().next().next().next().text()}
             result = company_crawler('http://qyk.gzcc.gov.cn/qyww/sccx/basicInfoview.jsp?qybh=%s'%(each.find('a').parent().prev().text()),company)
-            if result:
-                resultdb.save('guangzhou', company['company_code'], 'http://qyk.gzcc.gov.cn/qyww/sccx/basicInfoview.jsp?qybh=%s'%(each.find('a').parent().prev().text()), company, 'self_crawler')
+            pool.submit(company_crawler, 'http://qyk.gzcc.gov.cn/qyww/sccx/basicInfoview.jsp?qybh=%s'%(each.find('a').parent().prev().text()), company)
     pages = int(re.search('共(\d+)页', response.doc('.pagination ul li:nth-last-child(1)').text()).group(1))
     page = data['page']
     if (pages-page) > 0:
@@ -194,6 +195,7 @@ def company_crawler(url, company_info):
     for each in json.loads(requests.post('http://qyk.gzcc.gov.cn/qyww/json/',data={'arguments': json.dumps([0, 1000, company_info['company_code']]),'method': 'findJyBlzbtzsInfox', 'service': 'JyBlzbtzsBS'}).content)['data']:
         bids.append({'code': each['xmbh'], 'name': each['xmmc'], 'main_person': each['xmfzr'], 'start_date': each['ffsj']})
     company_info['bids'] = bids
-    return True
+    resultdb.save('guangzhou', company_info['company_code'], url, company_info, 'self_crawler')
 if __name__ == '__main__':
     onstart()
+    pool.shutdown()
