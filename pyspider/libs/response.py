@@ -17,8 +17,9 @@ from pyquery import PyQuery
 from requests.structures import CaseInsensitiveDict
 from requests import HTTPError
 from pyspider.libs import utils
+import logging
 
-
+logger = logging.getLogger('response')
 class Response(object):
 
     def __init__(self, status_code=None, url=None, orig_url=None, headers=CaseInsensitiveDict(),
@@ -206,15 +207,14 @@ class Response(object):
         """Returns a lxml object of the response's content that can be selected by xpath"""
         if not hasattr(self, '_elements'):
             try:
-                try:
-                    parser = lxml.html.HTMLParser(encoding=self.encoding)
-                except:
-                    parser = lxml.html.HTMLParser(encoding='utf-8')
+                logger.error('encoding is %s'%(self.encoding))
+                parser = lxml.html.HTMLParser(encoding=self.encoding)
                 self._elements = lxml.html.fromstring(self.content, parser=parser)
             except LookupError:
                 # lxml would raise LookupError when encoding not supported
                 # try fromstring without encoding instead.
                 # on windows, unicode is not availabe as encoding for lxml
+                logger.error('lxml is error when content is %s'%(self.content))
                 self._elements = lxml.html.fromstring(self.content)
         if isinstance(self._elements, lxml.etree._ElementTree):
             self._elements = self._elements.getroot()
