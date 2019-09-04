@@ -206,7 +206,10 @@ class Response(object):
         """Returns a lxml object of the response's content that can be selected by xpath"""
         if not hasattr(self, '_elements'):
             try:
-                parser = lxml.html.HTMLParser(encoding=self.encoding)
+                try:
+                    parser = lxml.html.HTMLParser(encoding=self.encoding)
+                except:
+                    parser = lxml.html.HTMLParser(encoding='utf-8')
                 self._elements = lxml.html.fromstring(self.content, parser=parser)
             except LookupError:
                 # lxml would raise LookupError when encoding not supported
